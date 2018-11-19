@@ -40,7 +40,20 @@ class Term_Project_Scene extends Scene_Component
         var base_map = Mat4.identity().times(Mat4.scale([100,1,100]))
                                        .times(Mat4.translation([0,-5,0]));
         this.shapes.box.draw( graphics_state, base_map, this.materials.phong );
-        //
+
+        var wall_1 = Mat4.identity().times(Mat4.translation([0,20,-100]))
+                                  .times(Mat4.scale([100,25,1]));
+        var wall_2 = Mat4.identity().times(Mat4.translation([0,20,100]))
+                                  .times(Mat4.scale([100,25,1])); 
+        var wall_3 = Mat4.identity().times(Mat4.translation([100,20,0]))
+                                  .times(Mat4.scale([1,25,100]));
+        var wall_4 = Mat4.identity().times(Mat4.translation([-100,20,0]))
+                                  .times(Mat4.scale([1,25,100]));                                                  
+        this.shapes.box.draw( graphics_state, wall_1, this.materials.phong.override({ color: Color.of([0.156,0.486,0.753,1])}) );
+        this.shapes.box.draw( graphics_state, wall_2, this.materials.phong.override({ color: Color.of([0.156,0.486,0.753,1])}) );
+        this.shapes.box.draw( graphics_state, wall_3, this.materials.phong.override({ color: Color.of([0.156,0.486,0.753,1])}) );
+        this.shapes.box.draw( graphics_state, wall_4, this.materials.phong.override({ color: Color.of([0.156,0.486,0.753,1])}) );
+;        //
 
       }
   }

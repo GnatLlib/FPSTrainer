@@ -4,7 +4,7 @@ window.Term_Project_Scene = window.classes.Term_Project_Scene =
         {
             super(context, control_box);    // First, include a secondary Scene that provides movement controls:
             if (!context.globals.has_controls)
-                context.register_scene_component(new Movement_Controls(context, control_box.parentElement.insertCell()));
+                context.register_scene_component(new Camera_Movement(context, control_box.parentElement.insertCell()));
 
             context.globals.graphics_state.camera_transform = Mat4.look_at(Vec.of(0, 25, 0), Vec.of(0, 25, 20), Vec.of(0, 1, 0));
 
@@ -13,10 +13,6 @@ window.Term_Project_Scene = window.classes.Term_Project_Scene =
                const mouse_position = ( e, rect = context.canvas.getBoundingClientRect() ) => 
                                             Vec.of( e.clientX - (rect.left + rect.right)/2, e.clientY - (rect.bottom + rect.top)/2 );
                                                  // Set up mouse response.  The last one stops us from reacting if the mouse leaves the canvas.
-               document.addEventListener( "click",   e => { context.canvas.requestPointerLock(); }, false );
-               context.canvas  .addEventListener( "mousedown", e => { if(document.pointerLockElement === context.canvas) console.log("pointer lock"); else console.log("pointer unlock"); } );
-//              // context.canvas  .addEventListener( "mousemove", e => { e.preventDefault(); this.mouse.from_center = mouse_position(e); } );
-//               //context.canvas  .addEventListener( "mouseout",  e => { if( !this.mouse.anchor ) this.mouse.from_center.scale(0) } );  
 
             const r = context.width / context.height;
             context.globals.graphics_state.projection_transform = Mat4.perspective(Math.PI / 4, r, .1, 1000);
@@ -39,10 +35,7 @@ window.Term_Project_Scene = window.classes.Term_Project_Scene =
         }
 
         make_control_panel() {
-           this.key_triggered_button( "Forward",[ "w" ], () =>  this.forward =  true, undefined, () => this.forward = false);  this.new_line();
-           this.key_triggered_button( "Left",   [ "a" ], () =>  this.left =  true, undefined, () => this.left = false );
-           this.key_triggered_button( "Back",   [ "s" ], () =>  this.back = true, undefined, () => this.back = false );
-           this.key_triggered_button( "Right",  [ "d" ], () =>  this.right = true, undefined, () => this.right = false );  this.new_line();
+
         }
 
         display(graphics_state) {
@@ -67,16 +60,7 @@ window.Term_Project_Scene = window.classes.Term_Project_Scene =
             this.shapes.box.draw(graphics_state, wall_2, this.materials.phong.override({color: Color.of([0.156, 0.486, 0.753, 1])}));
             this.shapes.box.draw(graphics_state, wall_3, this.materials.phong.override({color: Color.of([0.156, 0.486, 0.753, 1])}));
             this.shapes.box.draw(graphics_state, wall_4, this.materials.phong.override({color: Color.of([0.156, 0.486, 0.753, 1])}));
-            if(this.forward)
-                graphics_state.camera_transform = graphics_state.camera_transform.times(Mat4.translation([0,0,-1.5]));
-            if(this.left)
-                graphics_state.camera_transform = graphics_state.camera_transform.times(Mat4.translation([-1.5,0,0]));
-            if(this.right)
-                graphics_state.camera_transform = graphics_state.camera_transform.times(Mat4.translation([1.5,0,0]));
-            if(this.back)
-                graphics_state.camera_transform = graphics_state.camera_transform.times(Mat4.translation([0,0,1.5]));
-            
-            ;        //
+          
 
         }
     }

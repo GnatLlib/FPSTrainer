@@ -23,10 +23,19 @@ class Camera_Movement extends Scene_Component
             //Initialize movement tracking variables
             this.forward, this.left, this.back, this.right = false, false, false, false;
 
+            // Initialize camera angles
+            this.eulers = Vec.of(0,0,0);
+            this.camVector = Vec.of(0,0,0);
+            this.height = 10;
+
+            // Sensitivty and movement parameters
+            this.lookSpeed = 0.002;
+            this.walkSpeed = 1;
+
             //Bind class functions that need to be bound
             this.handleMouseMove = this.handleMouseMove.bind(this);
             this.applyMovementTransforms = this.applyMovementTransforms.bind(this);
-
+            this.updateCameraView = this.updateCameraView.bind(this);
         }
 
         //Create Movement control buttons
@@ -61,29 +70,91 @@ class Camera_Movement extends Scene_Component
         //Mousemove event handler 
         handleMouseMove(e){
             // *** FPS camera handling should probably take place here 
-            console.log(e);
+            // console.log(e.movementX, e.movementY);
+            this.eulers[1] += this.lookSpeed * e.movementX;              // yaw
+            this.eulers[2] += this.lookSpeed * e.movementY;              // pitch
+
+            const angleBound = 0.9;
+
+            if (this.eulers[2] < -angleBound)
+                this.eulers[2] = -angleBound;
+            if (this.eulers[2] > angleBound)
+                this.eulers[2] = angleBound;
+
+            //this.updateCameraView();
         }
 
         //Function to apply movement camera transforms to graphics_state.camera_transform
         applyMovementTransforms(){
             //Bind post_multiply operation to target and assign to doOperation
-            const doOperation = this.target()[ "post_multiply"].bind( this.target() );
+            //const doOperation = this.target()[ "post_multiply"].bind( this.target() );
+
+            var dx = 0;
+            var dz = 0;
 
             if(this.forward)
-                doOperation(Mat4.translation([0,0,-1.5]));
-            if(this.left)
-                doOperation(Mat4.translation([-1.5,0,0]));
-            if(this.right)
-                doOperation(Mat4.translation([1.5,0,0]));
+                dz = 2;
             if(this.back)
-                doOperation(Mat4.translation([0,0,1.5]));
+                dz = -2;
+            if(this.left)
+                dx = -2;
+            if(this.right)
+                dx = 2;
+
+            var mat =  this.context.globals.graphics_state.camera_transform;
+            var forward = Vec.of(mat[2][0], 0, mat[2][2]).times(-dz);               //
+            var strafe = Vec.of(mat[0][0], 0, mat[0][2]).times(dx);                //mat[1][0]
+
+            //console.log(forward);
+            //console.log(this.camVector);
+
+            var lookVector = forward.plus(strafe);
+            if (lookVector.norm() > 0)
+                lookVector = lookVector.normalized();
+            console.log(lookVector.norm());
+            lookVector = lookVector.times(this.walkSpeed);
+            this.camVector = this.camVector.minus(lookVector);
+
+            // HANDLE COLLISION TEMPORARILY HERE
+            const mapBound = 90;
+            this.camVector[1] = -this.height;
+            if (this.camVector[0] > mapBound)
+                this.camVector[0] = mapBound;
+            if (this.camVector[0] < -mapBound)
+                this.camVector[0] = -mapBound;
+            if (this.camVector[2] > mapBound)
+                this.camVector[2] = mapBound;
+            if (this.camVector[2] < -mapBound)
+                this.camVector[2] = -mapBound;
         }
 
+        updateCameraView(){
+            var matYaw = Mat4.identity();
+            var matPitch = Mat4.identity();
+
+            var yaw = this.eulers[1];
+            var pitch = this.eulers[2];
+
+            //console.log(yaw, pitch);
+            var mat =  this.context.globals.graphics_state.camera_transform;
+
+            matPitch = matPitch.times(Mat4.rotation(pitch, Vec.of(1, 0, 0)));   
+            matYaw = matYaw.times(Mat4.rotation(yaw, Vec.of(0, 1, 0)));
+
+            var matRotate = matPitch.times(matYaw);
+            var matTranslate = Mat4.translation(this.camVector);
+
+            var camMatrix = matRotate.times(matTranslate);
+            
+            // Instead of "post-multiplying" the camera matrix, we're actually just calculating and setting it manually
+            this.context.globals.graphics_state.camera_transform = camMatrix;
+        }
 
         display(graphics_state){
 
             //Apply the movement camera transforms
             this.applyMovementTransforms();
+            this.updateCameraView();
         }
 
 }

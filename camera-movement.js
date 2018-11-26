@@ -30,7 +30,7 @@ class Camera_Movement extends Scene_Component
 
             // Sensitivty and movement parameters
             this.lookSpeed = 0.002;
-            this.walkSpeed = 1.0;
+            this.walkSpeed = 1;
 
             //Bind class functions that need to be bound
             this.handleMouseMove = this.handleMouseMove.bind(this);
@@ -108,7 +108,11 @@ class Camera_Movement extends Scene_Component
             //console.log(forward);
             //console.log(this.camVector);
 
-            var lookVector = forward.plus(strafe).times(this.walkSpeed);
+            var lookVector = forward.plus(strafe);
+            if (lookVector.norm() > 0)
+                lookVector = lookVector.normalized();
+            console.log(lookVector.norm());
+            lookVector = lookVector.times(this.walkSpeed);
             this.camVector = this.camVector.minus(lookVector);
 
             // HANDLE COLLISION TEMPORARILY HERE

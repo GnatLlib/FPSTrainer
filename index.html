@@ -7,11 +7,14 @@
 <script src="tiny-graphics.js" ></script>
 <script src= "dependencies.js" ></script>
 <script src=   "main-scene.js" ></script>
-<script src = "camera-movement.js"></script></head>
+<script src = "camera-movement.js"></script>
+<script src = "aiming-manager.js"></script></head>
 <body style="background: DarkGray">       <!-- Begin typing your web page here. //-->
 
                               <!-- The following code embeds a WebGL canvas panel widget with certain scenes and their controls. //-->
-<div id="main-canvas" class="canvas-widget" style = "margin:auto"></div>
+<div id="main-canvas" class="canvas-widget" style = "margin:auto; position:relative;">
+  <img id="crosshair" src="assets/crosshair.png" height = "32" width="32" style="position:absolute; top:284px;left:524px;display:none">
+</div>
 <script> "use strict"     // ********************* THE ENTRY POINT OF YOUR WHOLE PROGRAM STARTS HERE ********************* 
                                            // Use this code to embed a widget into any web page.  The widget inclues a 3D WebGL area
                                            // (an HTML canvas) and various panels of controls.

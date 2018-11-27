@@ -59,11 +59,17 @@ class Camera_Movement extends Scene_Component
                 document.webkitPointerLockElement === this.canvas ){
                     //Add in the mousemove listener
                     document.addEventListener("mousemove", this.handleMouseMove);
+
+                    //Show crosshair
+                    document.getElementById("crosshair").style.display = "block";
                 }
             //Otherwise, the lock was just deactivated
             else{
                 //Remove the mousemove listener
                 document.removeEventListener("mousemove", this.handleMouseMove);
+
+                //Hide crosshair
+                document.getElementById("crosshair").style.display = "none";
             }
         }
 
@@ -111,7 +117,7 @@ class Camera_Movement extends Scene_Component
             var lookVector = forward.plus(strafe);
             if (lookVector.norm() > 0)
                 lookVector = lookVector.normalized();
-            console.log(lookVector.norm());
+            //console.log(lookVector.norm());
             lookVector = lookVector.times(this.walkSpeed);
             this.camVector = this.camVector.minus(lookVector);
 

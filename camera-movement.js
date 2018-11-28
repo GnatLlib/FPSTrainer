@@ -36,6 +36,7 @@ class Camera_Movement extends Scene_Component
             this.handleMouseMove = this.handleMouseMove.bind(this);
             this.applyMovementTransforms = this.applyMovementTransforms.bind(this);
             this.updateCameraView = this.updateCameraView.bind(this);
+
         }
 
         //Create Movement control buttons
@@ -127,6 +128,7 @@ class Camera_Movement extends Scene_Component
             lookVector = lookVector.times(this.walkSpeed);
             this.camVector = this.camVector.minus(lookVector);
 
+
             // HANDLE COLLISION TEMPORARILY HERE
             const mapBound = 90;
             this.camVector[1] = -this.height;
@@ -140,7 +142,7 @@ class Camera_Movement extends Scene_Component
                 this.camVector[2] = -mapBound;
         }
 
-        updateCameraView(){
+        updateCameraView(graphics_state){
             var matYaw = Mat4.identity();
             var matPitch = Mat4.identity();
 
@@ -160,13 +162,26 @@ class Camera_Movement extends Scene_Component
             
             // Instead of "post-multiplying" the camera matrix, we're actually just calculating and setting it manually
             this.context.globals.graphics_state.camera_transform = camMatrix;
+            
+            var gunOffset = Mat4.scale([0.005,0.01,0.1]).times(Mat4.translation([6, -2.8, -2]));
+            var gunMatrix = Mat4.inverse(camMatrix).times(gunOffset);
+               
+            var shapes = this.context.globals.shapes;
+            var materials = this.context.globals.materials;
+
+            var gunMaterial = this.context.get_instance(Phong_Shader).material();
+            gunMaterial.color = Color.of(0.1,0.1,0.1,1);
+            gunMaterial.ambient = 0.5
+            gunMaterial.specularity = 0;
+            shapes.box.draw(graphics_state, gunMatrix, gunMaterial);
+
         }
 
         display(graphics_state){
 
             //Apply the movement camera transforms
             this.applyMovementTransforms();
-            this.updateCameraView();
+            this.updateCameraView(graphics_state);
         }
 
 }

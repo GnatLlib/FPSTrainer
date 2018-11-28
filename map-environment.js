@@ -5,7 +5,6 @@ class Map_Environment extends Scene_Component
         Map_Environment is a Scene_Component responsible for rendering map elements/targets
         and objects that should be affected by collisions
         */
-
         constructor( context, control_box){
 
             super(context, control_box);
@@ -22,8 +21,7 @@ class Map_Environment extends Scene_Component
             };
 
             this.submit_shapes(context, shapes);
-
-
+            
             this.workspace = [];
             this.build_map();
         }
@@ -74,6 +72,7 @@ class Map_Environment extends Scene_Component
             this.add_object("sky", [1, 500, 500], [500, 20, 0], this.shapes.box, sky_material);
             this.add_object("sky", [1, 500, 500], [-500, 20, 0], this.shapes.box, sky_material);
             this.add_object("sky", [500, 0, 500], [0, 500, 0], this.shapes.box, sky_material);
+            this.add_object("sky", [500, 0, 500], [0, -500, 0], this.shapes.box, sky_material);
 
             // Sun
             var sun_material = this.context.get_instance(Phong_Shader).material();
@@ -81,9 +80,16 @@ class Map_Environment extends Scene_Component
             sun_material.diffusivity = 0;
             sun_material.ambient = 1;
             sun_material.specularity = 0;
-            
+
             this.add_object("sun", [10, 10, 10], [100, 150, 0], this.shapes.sphere, sun_material);
 
+            // Targets
+            var target_material = this.context.get_instance(Phong_Shader).material();
+            target_material.color = Color.of(125/255,115/255,115/255,1);
+            target_material.ambient = 1;
+
+            this.add_object("target", [1, 10, 4], [10, 0, 0], this.shapes.box, target_material, Mat4.rotation(1, Vec.of(0,1,0)));
+            this.add_object("target", [1, 10, 4], [20, 0, 20], this.shapes.box, target_material, Mat4.rotation(2, Vec.of(0,1,0)));
         }
 
         
@@ -93,9 +99,10 @@ class Map_Environment extends Scene_Component
             var materials = this.context.globals.materials;
             
             this.workspace.map( (part) => {
-                const part_mat4 = Mat4.translation(part.position).times(Mat4.scale(part.size)).times(part.rotation);
+                const part_mat4 = part.rotation.times(Mat4.translation(part.position))
+                                               .times(Mat4.scale(part.size));
+
                 part.shapes.draw(graphics_state, part_mat4, part.material);
             })
-
         }
 }

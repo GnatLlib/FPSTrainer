@@ -60,6 +60,9 @@ class Camera_Movement extends Scene_Component
                     //Add in the mousemove listener
                     document.addEventListener("mousemove", this.handleMouseMove);
 
+                    //Add in the click listener that triggers bullet fire
+                    document.addEventListener("click", this.context.globals.fireBullet);
+
                     //Show crosshair
                     document.getElementById("crosshair").style.display = "block";
                 }
@@ -67,6 +70,9 @@ class Camera_Movement extends Scene_Component
             else{
                 //Remove the mousemove listener
                 document.removeEventListener("mousemove", this.handleMouseMove);
+
+                //Remove the click listener that triggers bullet fire
+                document.removeEventListener("click", this.context.globals.fireBullet);
 
                 //Hide crosshair
                 document.getElementById("crosshair").style.display = "none";

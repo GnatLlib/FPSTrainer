@@ -22,9 +22,19 @@ class Aiming_Manager extends Scene_Component
             this.target = function() { return context.globals.movement_controls_target() }
             context.globals.movement_controls_target = function(t) { return context.globals.graphics_state.camera_transform };
 
-            //create firing callback function and attach to context.globals
+            //bind functions
             this.fireBullet = this.fireBullet.bind(this);
-            this.context.globals.fireBullet = this.fireBullet;
+            this.handleMouseDown = this.handleMouseDown.bind(this);
+            this.handleMouseUp = this.handleMouseUp.bind(this);
+            this.toggleZoom = this.toggleZoom.bind(this);
+            this.drawBullets = this.drawBullets.bind(this);
+
+            //add document listeners 
+            document.addEventListener('mousedown', this.handleMouseDown);
+            document.addEventListener('mouseup', this.handleMouseUp);
+
+            //initialize zoom state
+            this.context.globals.zoomed = false;
 
             //create bullet array to keep track of the current bullets and attach to context.globals
             this.activeBullets = [];
@@ -41,6 +51,44 @@ class Aiming_Manager extends Scene_Component
                 };
 
                
+        }
+
+        handleMouseDown(e){
+
+            //if the pointer is not in the locked state, do nothing
+            if (!this.context.globals.pointerLocked){
+                return;
+            }
+
+            //if left click, fire bullet
+            if(e.button === 0){
+                this.fireBullet();
+            }
+
+            //if right click, toggle zoom in 
+            if (e.button === 2){
+                this.toggleZoom();
+            }
+
+        }
+
+        handleMouseUp(e){
+            //if the pointer is not in the locked state, do nothing
+            if (!this.context.globals.pointerLocked){
+                return;
+            }
+
+            //if right mouse button released, toggle zoom in
+            if (e.button === 2){
+                this.toggleZoom();
+            }
+        }
+
+        toggleZoom(){
+
+            //toggle global zoomed variable
+            this.context.globals.zoomed = !this.context.globals.zoomed; 
+            //console.log(this.context.globals.zoomed);  
         }
 
         fireBullet(){
@@ -70,13 +118,8 @@ class Aiming_Manager extends Scene_Component
             this.activeBullets.push(bullet);
       
         }
-        
-        display(graphics_state){
-            const t = graphics_state.animation_time / 1000, dt = graphics_state.animation_delta_time / 1000;
-            
-            //const test_sphere = Mat4.identity().times(Mat4.translation([0, 10, -15]));
-            //console.log(dt);
 
+        drawBullets(graphics_state, t, dt){
             this.activeBullets.map( (bullet) => {
                 
                 //check to see if bullet lifetime has expired
@@ -94,5 +137,12 @@ class Aiming_Manager extends Scene_Component
                 //update bullet location 
                 bullet.location = bulletTransform;
              })
+        }
+   
+        display(graphics_state){
+            const t = graphics_state.animation_time / 1000, dt = graphics_state.animation_delta_time / 1000;
+            
+            this.drawBullets(graphics_state, t, dt);
+        
         }
     }

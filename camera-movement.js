@@ -1,3 +1,9 @@
+//constant that define the zoom magnitude and speed for scoping
+const SCOPE_MAGNITUDE = 50;
+const ZOOM_SPEED = 500;
+
+
+
 window.Camera_Movement = window.classes.Camera_Movement = 
 class Camera_Movement extends Scene_Component
 {
@@ -36,6 +42,16 @@ class Camera_Movement extends Scene_Component
             this.handleMouseMove = this.handleMouseMove.bind(this);
             this.applyMovementTransforms = this.applyMovementTransforms.bind(this);
             this.updateCameraView = this.updateCameraView.bind(this);
+            this.applyZoomTransforms = this.applyZoomTransforms.bind(this);
+
+            //initialize global pointer locked state
+            this.context.globals.pointerLocked = false;
+
+            // Initialize zoom state variable 
+            this.currentZoom = 0;
+
+            // Initialize gun offset
+            this.gunOffset = Mat4.translation([2, -2, -1]).times(Mat4.scale([0.5,0.5,8]));
 
         }
 
@@ -61,8 +77,8 @@ class Camera_Movement extends Scene_Component
                     //Add in the mousemove listener
                     document.addEventListener("mousemove", this.handleMouseMove);
 
-                    //Add in the click listener that triggers bullet fire
-                    document.addEventListener("click", this.context.globals.fireBullet);
+                    //Toggle global pointer locked state
+                    this.context.globals.pointerLocked = true;
 
                     //Show crosshair
                     document.getElementById("crosshair").style.display = "block";
@@ -72,8 +88,8 @@ class Camera_Movement extends Scene_Component
                 //Remove the mousemove listener
                 document.removeEventListener("mousemove", this.handleMouseMove);
 
-                //Remove the click listener that triggers bullet fire
-                document.removeEventListener("click", this.context.globals.fireBullet);
+                //Toggle global pointer locked state
+                this.context.globals.pointerLocked = false;
 
                 //Hide crosshair
                 document.getElementById("crosshair").style.display = "none";
@@ -115,11 +131,15 @@ class Camera_Movement extends Scene_Component
                 dx = 2;
 
             var mat =  this.context.globals.graphics_state.camera_transform;
+
+            
             var forward = Vec.of(mat[2][0], 0, mat[2][2]).times(-dz);               //
             var strafe = Vec.of(mat[0][0], 0, mat[0][2]).times(dx);                //mat[1][0]
 
-            //console.log(forward);
-            //console.log(this.camVector);
+            //if we are currently zooming, turn off forward/backward movement
+            if(this.currentZoom > 0 && this.currentZoom < SCOPE_MAGNITUDE){
+                forward = Vec.of(0,0,0);
+            }
 
             var lookVector = forward.plus(strafe);
             if (lookVector.norm() > 0)
@@ -140,6 +160,43 @@ class Camera_Movement extends Scene_Component
                 this.camVector[2] = mapBound;
             if (this.camVector[2] < -mapBound)
                 this.camVector[2] = -mapBound;
+        }
+
+        /*  Function to calculate the zoom transform to handle scoping. 
+            While this.context.globals.zoomed state is true, the camera will move forwards until it hits the 
+            SCOPE_MAGNITUDE upper bound. If the zoomed state is false, the camera will move back towards a 
+            zoom of zero.
+            */
+        applyZoomTransforms(dt){
+
+            //get the current camera view direction
+            const viewDirection = this.target()[2];
+            //extract the 3-dimensional view vector
+            const viewVector = Vec.of(viewDirection[0], viewDirection[1], viewDirection[2]);
+            const zoomDirection = this.context.globals.zoomed? 1 : -1;
+
+            const updatedCurrentZoom = this.currentZoom + dt * ZOOM_SPEED * zoomDirection;
+            
+            
+            //if updatedCurrentZoom if <=0 or >= SCOPE_MAGNITUDE, do nothing, otherwise undate currentZoom and move camera
+            if (updatedCurrentZoom > 0 && updatedCurrentZoom < SCOPE_MAGNITUDE){
+                this.currentZoom = updatedCurrentZoom;
+
+                this.camVector = this.camVector.plus(viewVector.times(dt * ZOOM_SPEED * zoomDirection));
+            }
+            else{
+                if(updatedCurrentZoom< 0){
+                    this.currentZoom = 0;
+                }
+                else if (updatedCurrentZoom> SCOPE_MAGNITUDE){
+                    this.currentZoom = SCOPE_MAGNITUDE;
+                }
+            }
+
+            //interpolate gunOffset to simulate raising gun to eye based on currentzoom 
+            const zoomRatio = 1 - (this.currentZoom/SCOPE_MAGNITUDE);
+            this.gunOffset = Mat4.translation([2*zoomRatio, -1.1 - 0.9*zoomRatio, -1]).times(Mat4.scale([0.5,0.5,8]));
+
         }
 
         updateCameraView(graphics_state){
@@ -163,7 +220,8 @@ class Camera_Movement extends Scene_Component
             // Instead of "post-multiplying" the camera matrix, we're actually just calculating and setting it manually
             this.context.globals.graphics_state.camera_transform = camMatrix;
             
-            var gunOffset = Mat4.scale([0.005,0.01,0.1]).times(Mat4.translation([6, -2.8, -2]));
+            //var gunOffset = Mat4.translation([2, -2, -1]).times(Mat4.scale([0.5,0.5,8]));
+            var gunOffset = this.gunOffset;
             var gunMatrix = Mat4.inverse(camMatrix).times(gunOffset);
                
             var shapes = this.context.globals.shapes;
@@ -178,9 +236,11 @@ class Camera_Movement extends Scene_Component
         }
 
         display(graphics_state){
+            const t = graphics_state.animation_time / 1000, dt = graphics_state.animation_delta_time / 1000;
 
             //Apply the movement camera transforms
             this.applyMovementTransforms();
+            this.applyZoomTransforms(dt);
             this.updateCameraView(graphics_state);
         }
 

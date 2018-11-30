@@ -1,6 +1,6 @@
 //Global constants controlling target properties
 const TARGET_SIZE = 2.5;
-const TARGET_LIFETIME = 5;
+const TARGET_LIFETIME = 3;
 
 window.Target_Manager = window.classes.Target_Manager =
     class Target_Manager extends Scene_Component {
@@ -58,7 +58,6 @@ window.Target_Manager = window.classes.Target_Manager =
             const randz = Math.random()*80 + 70;
             
             let trans = Mat4.translation(cameraPosition).times(Mat4.translation([viewVector[0] * -randx, viewVector[1] * -randy, viewVector[2] * -randz]));
-            console.log(trans)
             return trans;
         }
 

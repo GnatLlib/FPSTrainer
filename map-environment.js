@@ -1,8 +1,8 @@
-window.Map_Environment = window.classes.Map_Environment = 
+window.Map_Environment = window.classes.Map_Environment =
 class Map_Environment extends Scene_Component
 {
     /*
-        Map_Environment is a Scene_Component responsible for rendering map elements/targets
+        Map_Environment is a Scene_Component responsible for rendering static map elements
         and objects that should be affected by collisions
         */
         constructor( context, control_box){
@@ -82,14 +82,6 @@ class Map_Environment extends Scene_Component
             sun_material.specularity = 0;
 
             this.add_object("sun", [10, 10, 10], [100, 150, 0], this.shapes.sphere, sun_material);
-
-            // Targets
-            var target_material = this.context.get_instance(Phong_Shader).material();
-            target_material.color = Color.of(125/255,115/255,115/255,1);
-            target_material.ambient = 1;
-
-            this.add_object("target", [1, 10, 4], [10, 0, 0], this.shapes.box, target_material, Mat4.rotation(1, Vec.of(0,1,0)));
-            this.add_object("target", [1, 10, 4], [20, 0, 20], this.shapes.box, target_material, Mat4.rotation(2, Vec.of(0,1,0)));
         }
 
         

@@ -8,6 +8,8 @@ window.Term_Project_Scene = window.classes.Term_Project_Scene =
                 context.register_scene_component(new Camera_Movement(context, control_box.parentElement.insertCell()));
                 context.register_scene_component(new Aiming_Manager(context, control_box.parentElement.insertCell()));
                 context.register_scene_component(new Map_Environment(context, control_box.parentElement.insertCell()));
+                context.register_scene_component(new Target_Manager(context, control_box.parentElement.insertCell()));
+
             context.globals.graphics_state.camera_transform = Mat4.look_at(Vec.of(0, 25, 0), Vec.of(0, 25, 20), Vec.of(0, 1, 0));
 
             this.context = context;

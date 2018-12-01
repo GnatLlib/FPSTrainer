@@ -1,5 +1,94 @@
 <!-- Graphics Example Code.  index.html - The web page document containing the canvas (drawing surface), that launches your javascript files. //-->
 <!DOCTYPE html> <html> <head> <meta charset="UTF-8"/> <link rel="icon" href="assets/fav.ico">
+
+  <!-- Custom Shaders for Volumetric Lighting -->
+<script id = "volumetric_vert", type="x-shader/x-fragment">
+  precision mediump float;
+
+  attribute vec3 coordinates;
+  varying vec2 vUv;
+
+  void main() {
+      vUv = 0.5 * (coordinates.xy+1.0);
+      //vUv = coordinates.xy;
+      
+      gl_Position = vec4(coordinates.xy, 0.0, 1.0);
+  }
+</script>
+
+<script id = "volumetric_frag", type="x-shader/x-fragment">
+  precision highp float;
+    uniform sampler2D occlusionTexture;
+    varying vec2 vUv;
+    
+    uniform vec2 lightPosition;
+    
+    uniform float density;
+    uniform float weight;
+    uniform float decay;
+    uniform float exposure;
+    uniform int numSamples;
+    uniform int outOfBounds;
+
+    vec3 godrays(
+    float density,
+    float weight,
+    float decay,
+    float exposure,
+    int numSamples,
+    sampler2D occlusionTexture,
+    vec2 lightPosition,
+    vec2 uv
+    ) {
+
+    vec3 fragColor = vec3(0.0,0.0,0.0);
+
+    //if light position is off the screen, don't render any rays
+    if (outOfBounds == 1){
+        return fragColor;
+    }
+    vec2 deltaTextCoord = vec2( uv - lightPosition.xy );
+
+    vec2 textCoo = uv.xy ;
+    deltaTextCoord *= (1.0 /  float(numSamples)) * density;
+    float illuminationDecay = 1.0;
+
+
+    for(int i=0; i < 100 ; i++){
+        if(numSamples < i) {
+            break;
+        }
+
+        textCoo -= deltaTextCoord;
+        vec3 samp = texture2D(occlusionTexture, textCoo   ).xyz;
+        //vec3 samp = vec3(1.0,1.0,1.0);
+        samp *= illuminationDecay * weight;
+        fragColor += samp;
+        illuminationDecay *= decay;
+    }
+
+    fragColor *= exposure;
+    return fragColor;
+}
+    
+    
+    void main() {
+    
+    vec3 fragColor = godrays(
+        density,
+        weight,
+        decay,
+        exposure,
+        numSamples,
+        occlusionTexture,
+        lightPosition,
+        vUv
+        );
+    
+        gl_FragColor = vec4(fragColor , 1.0);
+    }
+</script>
+
 <script> window.tiny_graphics = {};             // Store all our JavaScipt code inside of classes here.
          window.classes = {}                    
          </script>          
@@ -9,7 +98,8 @@
 <script src=   "main-scene.js" ></script>
 <script src = "camera-movement.js"></script>
 <script src = "map-environment.js"></script>
-<script src = "aiming-manager.js"></script></head>
+<script src = "aiming-manager.js"></script>
+<script src = "volumetric-lighting.js"></script></head>
 <body style="background: DarkGray">       <!-- Begin typing your web page here. //-->
 
                               <!-- The following code embeds a WebGL canvas panel widget with certain scenes and their controls. //-->
@@ -30,5 +120,4 @@
 <script> "use strict"
   new Code_Widget( "main-code", "Term_Project_Scene" );
 </script>
-
 </body></html>

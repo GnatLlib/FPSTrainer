@@ -50,6 +50,8 @@ class Aiming_Manager extends Scene_Component
             this.materials =
                 {
                     phong: context.get_instance(Phong_Shader).material(Color.of(0.5, 0.5, 0.5, 1), {ambient: 1}),
+                    gun: context.get_instance(Fake_Bump_Map).material( Color.of( 0,0,0,1),       
+            { ambient: 1, texture: this.context.get_instance( "/assets/M16_diffuse.jpeg" ) } )
                 };
 
                
@@ -149,10 +151,9 @@ class Aiming_Manager extends Scene_Component
             var shapes = this.context.globals.shapes;
             var materials = this.context.globals.materials;
 
-            var gunMaterial = this.context.get_instance(Fake_Bump_Map).material( Color.of( 0,0,0,1),       
-            { ambient: 1, texture: this.context.get_instance( "/assets/M16_diffuse.jpeg" ) } );
+            
     
-            this.shapes.rifle.draw(graphics_state, gunMatrix, gunMaterial);
+            this.shapes.rifle.draw(graphics_state, gunMatrix, this.materials.gun);
         }
    
         display(graphics_state){

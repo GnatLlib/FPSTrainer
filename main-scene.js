@@ -34,7 +34,7 @@ window.Term_Project_Scene = window.classes.Term_Project_Scene =
                     phong: context.get_instance(Phong_Shader).material(Color.of(0.5, 0.5, 0.5, 1), {ambient: 1}),
                     phong2: context.get_instance(Phong_Shader).material(Color.of(1, 1, 1, 1), {ambient: 1,}),
                 };
-            this.lights = [new Light(Vec.of(100, 500, 5, 1), Color.of(1, 1, 0.5, 1), 10000000000)];
+            this.lights = [new Light(Vec.of(100, 150, 0, 1), Color.of(1, 1, 1, 1), 1000000000)];
 
             context.globals.shapes = this.shapes;
             context.globals.materials = this.materials;

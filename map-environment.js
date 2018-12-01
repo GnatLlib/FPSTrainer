@@ -53,7 +53,7 @@ class Map_Environment extends Scene_Component
             // Walls
             var wall_material = this.context.get_instance(Phong_Shader).material();
             wall_material.color = Color.of(125/255,105/255,105/255,1);
-            wall_material.ambient = 1;
+            wall_material.ambient = 0.2;
 
             this.add_object("wall", [100, 25, 1], [0, 20, -100], this.shapes.box, wall_material);
             this.add_object("wall", [100, 25, 1], [0, 20, 100], this.shapes.box, wall_material);
@@ -67,16 +67,16 @@ class Map_Environment extends Scene_Component
             sky_material.ambient = 1;
             sky_material.specularity = 0;
 
-            this.add_object("sky", [500, 500, 1], [0, 20, -500], this.shapes.box, sky_material);
-            this.add_object("sky", [500, 500, 1], [0, 20, 500], this.shapes.box, sky_material);
-            this.add_object("sky", [1, 500, 500], [500, 20, 0], this.shapes.box, sky_material);
-            this.add_object("sky", [1, 500, 500], [-500, 20, 0], this.shapes.box, sky_material);
-            this.add_object("sky", [500, 0, 500], [0, 500, 0], this.shapes.box, sky_material);
-            this.add_object("sky", [500, 0, 500], [0, -500, 0], this.shapes.box, sky_material);
+            //this.add_object("sky", [500, 500, 1], [0, 20, -500], this.shapes.box, sky_material);
+            //this.add_object("sky", [500, 500, 1], [0, 20, 500], this.shapes.box, sky_material);
+            //this.add_object("sky", [1, 500, 500], [500, 20, 0], this.shapes.box, sky_material);
+            //this.add_object("sky", [1, 500, 500], [-500, 20, 0], this.shapes.box, sky_material);
+            //this.add_object("sky", [500, 0, 500], [0, 500, 0], this.shapes.box, sky_material);
+            //this.add_object("sky", [500, 0, 500], [0, -500, 0], this.shapes.box, sky_material);
 
             // Sun
             var sun_material = this.context.get_instance(Phong_Shader).material();
-            sun_material.color = Color.of(255/255,206/255,100/255,1);
+            sun_material.color = Color.of(255/255,255/255,255/255,1);
             sun_material.diffusivity = 0;
             sun_material.ambient = 1;
             sun_material.specularity = 0;

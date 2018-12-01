@@ -21,7 +21,10 @@ class Map_Environment extends Scene_Component
             };
 
             this.submit_shapes(context, shapes);
-            
+
+            //save global sun Position
+            this.context.globals.graphics_state.sunPosition = Vec.of(50,100,100);
+        
             this.workspace = [];
             this.build_map();
         }
@@ -55,33 +58,21 @@ class Map_Environment extends Scene_Component
             wall_material.color = Color.of(125/255,105/255,105/255,1);
             wall_material.ambient = 0.2;
 
-            this.add_object("wall", [100, 25, 1], [0, 20, -100], this.shapes.box, wall_material);
-            this.add_object("wall", [100, 25, 1], [0, 20, 100], this.shapes.box, wall_material);
-            this.add_object("wall", [1, 25, 100], [100, 20, 0], this.shapes.box, wall_material);
-            this.add_object("wall", [1, 25, 100], [-100, 20, 0], this.shapes.box, wall_material);
-
-            // Skybox
-            var sky_material = this.context.get_instance(Phong_Shader).material();
-            sky_material.color = Color.of(135/255,206/255,250/255,1);
-            sky_material.diffusivity = 0;
-            sky_material.ambient = 1;
-            sky_material.specularity = 0;
-
-            //this.add_object("sky", [500, 500, 1], [0, 20, -500], this.shapes.box, sky_material);
-            //this.add_object("sky", [500, 500, 1], [0, 20, 500], this.shapes.box, sky_material);
-            //this.add_object("sky", [1, 500, 500], [500, 20, 0], this.shapes.box, sky_material);
-            //this.add_object("sky", [1, 500, 500], [-500, 20, 0], this.shapes.box, sky_material);
-            //this.add_object("sky", [500, 0, 500], [0, 500, 0], this.shapes.box, sky_material);
-            //this.add_object("sky", [500, 0, 500], [0, -500, 0], this.shapes.box, sky_material);
+            this.add_object("wall", [100, 20, 1], [0, 5, -100], this.shapes.box, wall_material);
+            this.add_object("wall", [100, 20, 1], [0, 5, 100], this.shapes.box, wall_material);
+            this.add_object("wall", [1, 20, 100], [100, 5, 0], this.shapes.box, wall_material);
+            this.add_object("wall", [1, 20, 100], [-100, 5, 0], this.shapes.box, wall_material);
 
             // Sun
-            var sun_material = this.context.get_instance(Phong_Shader).material();
+            var sun_material = this.context.get_instance(Phong_Shader).material()
+                .override({ useFixed: true});
             sun_material.color = Color.of(255/255,255/255,255/255,1);
             sun_material.diffusivity = 0;
             sun_material.ambient = 1;
             sun_material.specularity = 0;
 
-            this.add_object("sun", [10, 10, 10], [100, 150, 0], this.shapes.sphere, sun_material);
+        
+            this.add_object("sun", [6, 6, 6], this.context.globals.graphics_state.sunPosition, this.shapes.sphere, sun_material);
 
             // Targets
             var target_material = this.context.get_instance(Phong_Shader).material();

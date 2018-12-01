@@ -427,8 +427,8 @@ class Phong_Shader extends Shader          // THE DEFAULT SHADER: This uses the 
                                            // of the old color into the result.  Finally, an image is displayed onscreen.
 { material( color, properties )     // Define an internal class "Material" that stores the standard settings found in Phong lighting.
   { return new class Material       // Possible properties: ambient, diffusivity, specularity, smoothness, gouraud, texture.
-      { constructor( shader, color = Color.of( 0,0,0,1 ), ambient = 0, diffusivity = 1, specularity = 1, smoothness = 40 )
-          { Object.assign( this, { shader, color, ambient, diffusivity, specularity, smoothness } );  // Assign defaults.
+      { constructor( shader, color = Color.of( 0,0,0,1 ), ambient = 0, diffusivity = 1, specularity = 1, smoothness = 40, useFixed = false )
+          { Object.assign( this, { shader, color, ambient, diffusivity, specularity, smoothness, useFixed} );  // Assign defaults.
             Object.assign( this, properties );                                                        // Optionally override defaults.
           }
         override( properties )                      // Easily make temporary overridden versions of a base material, such as
@@ -532,7 +532,7 @@ class Phong_Shader extends Shader          // THE DEFAULT SHADER: This uses the 
     // Define how to synchronize our JavaScript's variables to the GPU's:
   update_GPU( g_state, model_transform, material, gpu = this.g_addrs, gl = this.gl )
     {                              // First, send the matrices to the GPU, additionally cache-ing some products of them we know we'll need:
-      this.update_matrices( g_state, model_transform, gpu, gl );
+      this.update_matrices( g_state, model_transform, gpu, gl, material.useFixed );
       gl.uniform1f ( gpu.animation_time_loc, g_state.animation_time / 1000 );
 
       if( g_state.gouraud === undefined ) { g_state.gouraud = g_state.color_normals = false; }    // Keep the flags seen by the shader 
@@ -563,17 +563,34 @@ class Phong_Shader extends Shader          // THE DEFAULT SHADER: This uses the 
       gl.uniform4fv( gpu.lightColor_loc,          lightColors_flattened );
       gl.uniform1fv( gpu.attenuation_factor_loc,  lightAttenuations_flattened );
     }
-  update_matrices( g_state, model_transform, gpu, gl )                                    // Helper function for sending matrices to GPU.
-    {                                                   // (PCM will mean Projection * Camera * Model)
-      let [ P, C, M ]    = [ g_state.projection_transform, g_state.camera_transform, model_transform ],
-            CM     =      C.times(  M ),
-            PCM    =      P.times( CM ),
-            inv_CM = Mat4.inverse( CM ).sub_block([0,0], [3,3]);
+  update_matrices( g_state, model_transform, gpu, gl, useFixed = false )                                    // Helper function for sending matrices to GPU.
+    {                      
+      
+      // (PCM will mean Projection * Camera * Model)
+      let [ P, C, M ]    = [ g_state.projection_transform, g_state.camera_transform, model_transform ];
+
+            //If use_fixed is set, we remove the translation from the camera matrix
+            if(useFixed){
+              C = C.copy();
+              C[0][3] = 0;
+              C[1][3] = 0;
+              C[2][3] = 0;
+              C[3][3] = 1;
+              C[3][0] = 0;
+              C[3][1] = 0;
+              C[3][2] = 0;
+            }
+      let   CM     =      C.times(  M );
+      let   PCM    =      P.times( CM );
+      let   inv_CM = Mat4.inverse( CM ).sub_block([0,0], [3,3]);
                                                                   // Send the current matrices to the shader.  Go ahead and pre-compute
                                                                   // the products we'll need of the of the three special matrices and just
                                                                   // cache and send those.  They will be the same throughout this draw
                                                                   // call, and thus across each instance of the vertex shader.
                                                                   // Transpose them since the GPU expects matrices as column-major arrays.                                  
+      
+      
+      
       gl.uniformMatrix4fv( gpu.camera_transform_loc,                  false, Mat.flatten_2D_to_1D(     C .transposed() ) );
       gl.uniformMatrix4fv( gpu.camera_model_transform_loc,            false, Mat.flatten_2D_to_1D(     CM.transposed() ) );
       gl.uniformMatrix4fv( gpu.projection_camera_model_transform_loc, false, Mat.flatten_2D_to_1D(    PCM.transposed() ) );

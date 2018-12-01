@@ -54,27 +54,46 @@ const RenderPostProcessing = (gl, postProcessBundle, graphicsState) => {
    
 
     //calculate light position on screen space
-    let lightPosition = Vec.of(100,150,0,1);
+    let lightPosition = 
+        Vec.of(graphicsState.sunPosition[0], graphicsState.sunPosition[1], graphicsState.sunPosition[2], 1);
     let outOfBounds = 0;
-    lightPosition = graphicsState.camera_transform.times(lightPosition);
+
+    //remove translation from camera_transform
+    let C = graphicsState.camera_transform.copy();
+    C[0][3] = 0;
+    C[1][3] = 0;
+    C[2][3] = 0;
+    C[3][3] = 1;
+    C[3][0] = 0;
+    C[3][1] = 0;
+    C[3][2] = 0;
+
+    lightPosition = C.times(lightPosition);
     lightPosition = graphicsState.projection_transform.times(lightPosition);
     lightPosition = lightPosition.times(1.0/lightPosition[3]);
 
+   
+    //if lightpostion[2] > 1 we are out of bounds
+    if (lightPosition[2] > 1.0){
+        outOfBounds = 1;
+    }
+ 
     lightPosition = lightPosition.plus([1.0,1.0,0.0,0.0]);
     lightPosition = lightPosition.times(0.5);
 
+    
     //keep lightPosition between 0 and 1
-    if (lightPosition[0] < 0.0){
+    if (lightPosition[0] < -0.05){
         outOfBounds = 1;
     }
-    else if (lightPosition[0] > 1.0 ){
+    else if (lightPosition[0] > 1.05){
         outOfBounds = 1;
     }
 
-    if (lightPosition[1] < 0.0){
+    if (lightPosition[1] < -0.05){
         outOfBounds = 1;
     }
-    else if (lightPosition[1] > 1.0 ){
+    else if (lightPosition[1] > 1.05){
         outOfBounds = 1;
     }
 
@@ -117,7 +136,7 @@ const RenderPostProcessing = (gl, postProcessBundle, graphicsState) => {
      /* Activate the post processing program and set uniform values */
      gl.useProgram(postProcessProgram);
 
-     gl.uniform1f(uniforms.density, 2.0);
+     gl.uniform1f(uniforms.density, 1.0);
      gl.uniform1f(uniforms.weight, 0.01);
      gl.uniform1f(uniforms.decay, 1.0);
      gl.uniform1f(uniforms.exposure, 1.0);

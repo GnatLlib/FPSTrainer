@@ -1,8 +1,36 @@
 <!-- Graphics Example Code.  index.html - The web page document containing the canvas (drawing surface), that launches your javascript files. //-->
 <!DOCTYPE html> <html> <head> <meta charset="UTF-8"/> <link rel="icon" href="assets/fav.ico">
 
-  <!-- Custom Shaders for Volumetric Lighting -->
-<script id = "volumetric_vert", type="x-shader/x-fragment">
+<!--  Custom Shaders for Skybox Rendering-->
+<script id = "skybox_vert", type = "x-shader/x-vertex">
+    precision mediump float;
+    attribute vec3 aPosition;
+
+    uniform mat4 projection;
+    uniform mat4 view;
+
+    varying vec3 texCoords;
+
+    void main(){
+        texCoords = aPosition;
+        gl_Position = projection * vec4(aPosition, 1.0);
+        //gl_Position = vec4(aPosition, 1.0);
+    }
+</script>
+
+<script id = "skybox_frag" type="x-shader/x-fragment">
+    precision mediump float;
+    varying vec3 texCoords;
+
+    uniform samplerCube skyboxTex;
+
+    void main(){
+        gl_FragColor = textureCube(skyboxTex, texCoords);
+        //gl_FragColor = vec4(1.0,1.0,0.0,1.0);
+    }
+</script>
+<!-- Custom Shaders for Volumetric Lighting -->
+<script id = "volumetric_vert", type="x-shader/x-vertex">
   precision mediump float;
 
   attribute vec3 coordinates;
@@ -99,7 +127,8 @@
 <script src = "camera-movement.js"></script>
 <script src = "map-environment.js"></script>
 <script src = "aiming-manager.js"></script>
-<script src = "volumetric-lighting.js"></script></head>
+<script src = "volumetric-lighting.js"></script>
+<script src = "skybox.js"></script> </head>
 <body style="background: DarkGray">       <!-- Begin typing your web page here. //-->
 
                               <!-- The following code embeds a WebGL canvas panel widget with certain scenes and their controls. //-->

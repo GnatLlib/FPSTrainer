@@ -429,7 +429,6 @@ class Texture                                // The Texture class wraps a pointe
 { constructor(             gl, filename, use_mipMap = true, bool_will_copy_to_GPU = true )
     { Object.assign( this, {   filename, use_mipMap,        bool_will_copy_to_GPU,       id: gl.createTexture() } );
 
-      console.log("loading texture");
       gl.bindTexture(gl.TEXTURE_2D, this.id );
       gl.texImage2D (gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE,
                     new Uint8Array([255, 0, 0, 255]));    // A single red pixel, as a placeholder image to prevent a console warning.
@@ -480,6 +479,18 @@ class Webgl_Manager      // This class manages a whole graphics program for one 
 
       //Create volumetric shading program
       this.postProcessBundle = CreatePostProgram(gl);
+
+      //create skybox cube_map
+      const textureFiles = [ 
+        '/assets/skybox/bloody-heresy_rt.png',
+        '/assets/skybox/bloody-heresy_lf.png',
+        '/assets/skybox/bloody-heresy_up.png',
+        '/assets/skybox/bloody-heresy_dn.png',
+        '/assets/skybox/bloody-heresy_bk.png',
+        '/assets/skybox/bloody-heresy_ft.png'
+      ]
+      this.skyboxTexture = LoadSkyBoxTextures(gl, textureFiles );
+      this.skyboxBundle = CreateSkyboxProgram(gl);
     }
   set_size( dimensions = [ 1080, 600 ] )                // This function allows you to re-size the canvas anytime.  
     { const [ width, height ] = dimensions;             // To work, it must change the size in CSS, wait for style to re-flow, 
@@ -512,7 +523,7 @@ class Webgl_Manager      // This class manages a whole graphics program for one 
       let texture = this.gl.createTexture();
       this.gl.activeTexture(this.gl.TEXTURE2);
       this.gl.bindTexture(this.gl.TEXTURE_2D, texture);
-      this.gl.texImage2D(this.gl.TEXTURE_2D, 0 ,this.gl.RGBA, 1080, 600, 0, this.gl.RGBA, this.gl.UNSIGNED_BYTE, null );
+      this.gl.texImage2D(this.gl.TEXTURE_2D, 0 ,this.gl.RGBA, 1080*0.5, 600*0.5, 0, this.gl.RGBA, this.gl.UNSIGNED_BYTE, null );
 
       // set the filtering so we don't need mips
       this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.LINEAR);
@@ -524,14 +535,17 @@ class Webgl_Manager      // This class manages a whole graphics program for one 
       this.gl.framebufferTexture2D( this.gl.FRAMEBUFFER, this.gl.COLOR_ATTACHMENT0, 
         this.gl.TEXTURE_2D, texture, 0 );
 
+      this.gl.viewport(0,0,1080*0.5, 600*0.5);
       for ( let s of this.scene_components ) s.display( this.globals.graphics_state );            // Draw each registered animation.
 
+      //Render scene normally
       this.gl.bindFramebuffer( this.gl.FRAMEBUFFER, null);
       this.gl.activeTexture(this.gl.TEXTURE0);
+      this.gl.viewport(0,0,1080, 600);
 
-
+      //Render skybox
       this.gl.clear( this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);     
-
+      RenderSkyBox(this.gl, this.skyboxBundle, this.globals.graphics_state, this.skyboxTexture);
       for ( let s of this.scene_components ) s.display( this.globals.graphics_state );            // Draw each registered animation.
       //Render Volumetric Lighting in post processing
       RenderPostProcessing(this.gl, this.postProcessBundle, this.globals.graphics_state);

@@ -1,6 +1,6 @@
 //constant that define the zoom magnitude and speed for scoping
-const SCOPE_MAGNITUDE = 50;
-const ZOOM_SPEED = 450;
+const SCOPE_MAGNITUDE = 30;
+const ZOOM_SPEED = 300;
 
 
 

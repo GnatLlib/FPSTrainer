@@ -119,7 +119,7 @@ class Aiming_Manager extends Scene_Component
       
         }
 
-        checkCollision(bulletPosition){
+        checkCollision(bulletPosition, t){
             var bulletPos = Vec.of(bulletPosition[0][3], bulletPosition[1][3], bulletPosition[2][3]);
 
             var hit = false
@@ -130,8 +130,9 @@ class Aiming_Manager extends Scene_Component
                 var distance = Math.sqrt(diff[0]*diff[0] + diff[1]*diff[1] + diff[2]*diff[2]);
                 if (distance <= 3)
                 {
-                   target.hit = true;
-                   hit = true;
+                    target.hit = true;
+                    target.hitTime = t;
+                    hit = true;
                 }
             })
             return hit;
@@ -152,8 +153,7 @@ class Aiming_Manager extends Scene_Component
                     .times(Mat4.translation([bullet.direction[0] * bulletDisplacement, bullet.direction[1] * bulletDisplacement, bullet.direction[2] * bulletDisplacement]));
 
                 //check to see if new bullet location is a collision
-                if (this.checkCollision(bulletTransform) == true){
-                        console.log("delet bullet");
+                if (this.checkCollision(bulletTransform, t) == true){
                     this.activeBullets.shift();
                     return;
                 }

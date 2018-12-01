@@ -1,6 +1,7 @@
 //Global constants controlling target properties
 const TARGET_SIZE = 2.5;
 const TARGET_LIFETIME = 3;
+const TARGET_SCORE_FACTOR = 100;
 
 window.Target_Manager = window.classes.Target_Manager =
     class Target_Manager extends Scene_Component {
@@ -41,6 +42,42 @@ window.Target_Manager = window.classes.Target_Manager =
                 {
                     phong: context.get_instance(Phong_Shader).material(Color.of(125 / 255, 115 / 255, 115 / 255, 1), {ambient: 1}),
                 };
+            
+            this.roundScore = 0;
+            this.roundActive = false;  
+            this.roundTargetsLeft = 0;
+        }
+
+        make_control_panel() {
+            this.key_triggered_button( "Begin round",[ " " ], () =>  this.startRound());  
+            this.new_line();
+            this.new_line();
+            
+            /* doesn't update live, not sure what this uses
+            this.control_panel.innerHTML += "Round Active: " + (this.roundActive ? "true" : "false");
+            this.new_line();
+            this.control_panel.innerHTML += "Round Score: " + (this.roundScore);
+            this.new_line();
+            this.control_panel.innerHTML += "Targets Left: " + (this.roundTargetsLeft);
+            */
+        }
+
+        startRound()
+        {
+            console.log("Start round");
+            if (this.roundActive == false)
+            {
+                this.roundActive = true;
+                this.roundScore = 0;
+                this.roundTargetsLeft = 20;
+            }
+        }
+
+        endRound()
+        {
+            console.log("End round")
+            this.roundActive = false;
+            this.roundTargetsLeft = 0;
         }
 
         randomCoord() {
@@ -72,19 +109,19 @@ window.Target_Manager = window.classes.Target_Manager =
             //create the target object to keep track of this bullet
             let target1 = {
                 location: targetTransform1,
-                hit: false,
                 genTime: this.context.globals.graphics_state.animation_time / 1000,
             };
 
             let target2 = {
                 location: targetTransform2,
-                hit: false,
                 genTime: this.context.globals.graphics_state.animation_time / 1000,
             };
             
             if (this.activeTarget.length < 2){
                 this.activeTarget.push(target1);
                 this.activeTarget.push(target2);
+                this.roundTargetsLeft -= 2;
+                console.log(this.roundTargetsLeft + " targets left");
             }
         }
 
@@ -98,11 +135,21 @@ window.Target_Manager = window.classes.Target_Manager =
                 }
                 const p = t%TARGET_LIFETIME/TARGET_LIFETIME;
                 if (target.hit == true)
-                {this.shapes.target.draw(graphics_state, target.location, this.materials.phong.override({ color: Color.of(0,1,0,1) }));
-
+                {
+                    this.shapes.target.draw(graphics_state, target.location, this.materials.phong.override({ color: Color.of(0,1,0,1) }));
+                    var score = Math.ceil((TARGET_LIFETIME - (target.hitTime - target.genTime)) / TARGET_LIFETIME * TARGET_SCORE_FACTOR);
+                    if (target.scored != true)
+                    {
+                        this.roundScore += score;   
+                        console.log("score", score);
+                        console.log("total score", this.roundScore);
+                        target.scored = true;
+                    }
                 }
                 else
-                {this.shapes.target.draw(graphics_state, target.location, this.materials.phong.override({ color: Color.of(0+p,0,1-p,1) }));}
+                {   
+                    this.shapes.target.draw(graphics_state, target.location, this.materials.phong.override({ color: Color.of(0+p,0,1-p,1) }));
+                }
                 
             })
 
@@ -111,10 +158,15 @@ window.Target_Manager = window.classes.Target_Manager =
         display(graphics_state) {
             const t = graphics_state.animation_time / 1000, dt = graphics_state.animation_delta_time / 1000;
                
+            if (this.roundActive == true)
+            {
+                if (this.roundTargetsLeft > 0 && Math.floor(t%TARGET_LIFETIME) == 0)
+                    this.generateTargets();
 
-            if (Math.floor(t%TARGET_LIFETIME) == 0)
-                this.generateTargets();
+                if (this.roundTargetsLeft <= 0)
+                    this.endRound();
+            }
 
-           this.drawTargets(graphics_state, t);
+            this.drawTargets(graphics_state, t);
         }
     }

@@ -72,14 +72,17 @@ window.Target_Manager = window.classes.Target_Manager =
             //create the target object to keep track of this bullet
             let target1 = {
                 location: targetTransform1,
+                hit: false,
                 genTime: this.context.globals.graphics_state.animation_time / 1000,
             };
 
             let target2 = {
                 location: targetTransform2,
+                hit: false,
                 genTime: this.context.globals.graphics_state.animation_time / 1000,
             };
-            if(this.activeTarget.length < 2){
+            
+            if (this.activeTarget.length < 2){
                 this.activeTarget.push(target1);
                 this.activeTarget.push(target2);
             }
@@ -87,17 +90,22 @@ window.Target_Manager = window.classes.Target_Manager =
 
         drawTargets(graphics_state, t) {
             this.activeTarget.map((target) => {
-
                 //check to see if target lifetime has expired
-                if(t - target.genTime > TARGET_LIFETIME
-        )
-            {
-                this.activeTarget.shift();
-                return;
-            }
-            const p = t%TARGET_LIFETIME/TARGET_LIFETIME;
-            this.shapes.target.draw(graphics_state, target.location, this.materials.phong.override({ color: Color.of(0+p,0,1-p,1) }));
-        })
+                if (t - target.genTime > TARGET_LIFETIME)
+                {
+                    this.activeTarget.shift();
+                    return;
+                }
+                const p = t%TARGET_LIFETIME/TARGET_LIFETIME;
+                if (target.hit == true)
+                {this.shapes.target.draw(graphics_state, target.location, this.materials.phong.override({ color: Color.of(0,1,0,1) }));
+
+                }
+                else
+                {this.shapes.target.draw(graphics_state, target.location, this.materials.phong.override({ color: Color.of(0+p,0,1-p,1) }));}
+                
+            })
+
         }
 
         display(graphics_state) {

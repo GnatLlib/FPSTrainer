@@ -119,10 +119,28 @@ class Aiming_Manager extends Scene_Component
       
         }
 
+        checkCollision(bulletPosition){
+            var bulletPos = Vec.of(bulletPosition[0][3], bulletPosition[1][3], bulletPosition[2][3]);
+
+            var hit = false
+            const targets = this.context.globals.activeTarget;
+            targets.map(target => {
+                var targetPos = Vec.of(target.location[0][3], target.location[1][3],target.location[2][3]);
+                var diff = targetPos.minus(bulletPos);
+                var distance = Math.sqrt(diff[0]*diff[0] + diff[1]*diff[1] + diff[2]*diff[2]);
+                if (distance <= 3)
+                {
+                   target.hit = true;
+                   hit = true;
+                }
+            })
+            return hit;
+        }
+
         drawBullets(graphics_state, t, dt){
             this.activeBullets.map( (bullet) => {
                 
-                //check to see if bullet lifetime has expired
+                // check to see if bullet lifetime has expired
                 if( t - bullet.firedTime > BULLET_LIFETIME){
                     this.activeBullets.shift();
                     return;
@@ -132,8 +150,15 @@ class Aiming_Manager extends Scene_Component
                 //translate bullet based on elapsed time
                 const bulletTransform = bullet.location
                     .times(Mat4.translation([bullet.direction[0] * bulletDisplacement, bullet.direction[1] * bulletDisplacement, bullet.direction[2] * bulletDisplacement]));
-                this.shapes.bullet.draw(graphics_state, bulletTransform, this.materials.phong.override({color: Color.of([0.156, 0.486, 0.753, 1])}));
 
+                //check to see if new bullet location is a collision
+                if (this.checkCollision(bulletTransform) == true){
+                        console.log("delet bullet");
+                    this.activeBullets.shift();
+                    return;
+                }
+
+                this.shapes.bullet.draw(graphics_state, bulletTransform, this.materials.phong.override({color: Color.of([0.156, 0.486, 0.753, 1])}));
                 //update bullet location 
                 bullet.location = bulletTransform;
              })

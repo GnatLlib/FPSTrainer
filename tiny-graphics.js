@@ -487,7 +487,9 @@ class Webgl_Manager      // This class manages a whole graphics program for one 
       return   this.instances[ shader_or_texture ] = new ( shader_or_texture )( this.gl );  // Compile it and put it on the GPU.
     }
   register_scene_component( component )     // Allow a Scene_Component to show their control panel and enter the event loop.
-    { this.scene_components.unshift( component );  component.make_control_panel( component.controls );
+    {
+      this.scene_components.unshift( component );  
+      component.make_control_panel( component.controls );
     }
   render( time=0 )                                                // Animate shapes based upon how much measured real time has transpired.
     {                            this.globals.graphics_state.animation_delta_time = time - this.prev_time;
@@ -506,7 +508,7 @@ window.Scene_Component = window.tiny_graphics.Scene_Component =
 class Scene_Component       // The Scene_Component superclass is the base class for any scene part or code snippet that you can add to a
 {                           // canvas.  Make your own subclass(es) of this and override their methods "display()" and "make_control_panel()"
                             // to make them do something.  Finally, push them onto your Webgl_Manager's "scene_components" array.
-  constructor( webgl_manager, control_box )
+  constructor( webgl_manager, control_box, show_controls )
     { const callback_behavior = ( callback, event ) => 
            { callback( event );
              event.preventDefault();    // Fire the callback and cancel any default browser shortcut that is an exact match.

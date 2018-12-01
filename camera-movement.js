@@ -11,7 +11,6 @@ class Camera_Movement extends Scene_Component
         camera and movement */
 
         constructor( context, control_box){
-
             super(context,control_box);
             this.context = context;
             this.canvas = context.canvas;
@@ -28,7 +27,7 @@ class Camera_Movement extends Scene_Component
             
             //Initialize movement tracking variables
             this.forward, this.left, this.back, this.right = false, false, false, false;
-
+            this.show = true;
             // Initialize camera angles
             this.eulers = Vec.of(0,0,0);
             this.camVector = Vec.of(0,0,0);
@@ -181,7 +180,6 @@ class Camera_Movement extends Scene_Component
             //if updatedCurrentZoom if <=0 or >= SCOPE_MAGNITUDE, do nothing, otherwise undate currentZoom and move camera
             if (updatedCurrentZoom > 0 && updatedCurrentZoom < SCOPE_MAGNITUDE){
                 this.currentZoom = updatedCurrentZoom;
-
                 this.camVector = this.camVector.plus(viewVector.times(dt * ZOOM_SPEED * zoomDirection));
             }
             else{

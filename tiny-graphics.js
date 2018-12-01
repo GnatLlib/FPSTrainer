@@ -538,7 +538,8 @@ class Webgl_Manager      // This class manages a whole graphics program for one 
         this.gl.TEXTURE_2D, texture, 0 );
 
       this.gl.viewport(0,0,1080*0.5, 600*0.5);
-      for ( let s of this.scene_components ) s.display( this.globals.graphics_state );            // Draw each registered animation.
+      for ( let s of this.scene_components ) s.display( this.globals.graphics_state );  
+      this.globals.graphics_state.sunRender();          // Draw each registered animation.
 
       //Render scene normally
       this.gl.bindFramebuffer( this.gl.FRAMEBUFFER, null);

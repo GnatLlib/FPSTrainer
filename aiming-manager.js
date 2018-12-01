@@ -157,7 +157,6 @@ class Aiming_Manager extends Scene_Component
 
                 //check to see if new bullet location is a collision
                 if (this.checkCollision(bulletTransform) == true){
-                        console.log("delet bullet");
                     this.activeBullets.shift();
                     return;
                 }

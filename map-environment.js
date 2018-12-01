@@ -24,6 +24,9 @@ class Map_Environment extends Scene_Component
 
             //save global sun Position
             this.context.globals.graphics_state.sunPosition = Vec.of(50,100,100);
+
+            //bind sunRender
+            this.context.globals.graphics_state.sunRender = () => {console.log("SUN RENDER")};
         
             this.workspace = [];
             this.build_map();
@@ -73,6 +76,7 @@ class Map_Environment extends Scene_Component
 
         
             this.add_object("sun", [6, 6, 6], this.context.globals.graphics_state.sunPosition, this.shapes.sphere, sun_material);
+            
 
             // Targets
             var target_material = this.context.get_instance(Phong_Shader).material();
@@ -90,10 +94,23 @@ class Map_Environment extends Scene_Component
             var materials = this.context.globals.materials;
             
             this.workspace.map( (part) => {
+
+                
                 const part_mat4 = part.rotation.times(Mat4.translation(part.position))
                                                .times(Mat4.scale(part.size));
 
-                part.shapes.draw(graphics_state, part_mat4, part.material);
+                /* !-- VERY HACKY delay rendering of sun and save for rendering with volumetric lighting
+                        This is done to avoid the lag between rendering the sun object and rendering the volumetric lighting 
+                        */
+                if(part.name == "sun"){
+                    this.context.globals.graphics_state.sunRender = () => {
+                        part.shapes.draw(graphics_state, part_mat4, part.material);
+                    }
+                    
+                }
+                else {
+                    part.shapes.draw(graphics_state, part_mat4, part.material);
+                }
             })
         }
 }

@@ -97,6 +97,8 @@ const RenderPostProcessing = (gl, postProcessBundle, graphicsState) => {
         outOfBounds = 1;
     }
 
+    //draw the sun
+    graphicsState.sunRender();
     
     //vertices for a rectangle that covers the entire viewport
     var vertices = [

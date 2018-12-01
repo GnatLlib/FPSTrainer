@@ -1,6 +1,6 @@
 //constant that define the zoom magnitude and speed for scoping
-const SCOPE_MAGNITUDE = 50;
-const ZOOM_SPEED = 500;
+const SCOPE_MAGNITUDE = 30;
+const ZOOM_SPEED = 300;
 
 
 
@@ -50,7 +50,9 @@ class Camera_Movement extends Scene_Component
             this.currentZoom = 0;
 
             // Initialize gun offset
-            this.gunOffset = Mat4.translation([2, -2, -1]).times(Mat4.scale([0.5,0.5,8]));
+            this.context.globals.gunOffset = Mat4.translation([0.65, -0.65, -3]).times(Mat4.scale([1.25,1.25,1.25,]));
+            
+           
 
         }
 
@@ -193,7 +195,7 @@ class Camera_Movement extends Scene_Component
 
             //interpolate gunOffset to simulate raising gun to eye based on currentzoom 
             const zoomRatio = 1 - (this.currentZoom/SCOPE_MAGNITUDE);
-            this.gunOffset = Mat4.translation([2*zoomRatio, -1.1 - 0.9*zoomRatio, -1]).times(Mat4.scale([0.5,0.5,8]));
+            this.context.globals.gunOffset = Mat4.translation([0 + 0.65 * zoomRatio, -0.55 - 0.1 * zoomRatio, -1.5 - 1.5* zoomRatio]).times(Mat4.scale([1.25,1.25,1.25,]));
 
         }
 
@@ -218,18 +220,7 @@ class Camera_Movement extends Scene_Component
             // Instead of "post-multiplying" the camera matrix, we're actually just calculating and setting it manually
             this.context.globals.graphics_state.camera_transform = camMatrix;
             
-            //var gunOffset = Mat4.translation([2, -2, -1]).times(Mat4.scale([0.5,0.5,8]));
-            var gunOffset = this.gunOffset;
-            var gunMatrix = Mat4.inverse(camMatrix).times(gunOffset);
-               
-            var shapes = this.context.globals.shapes;
-            var materials = this.context.globals.materials;
-
-            var gunMaterial = this.context.get_instance(Phong_Shader).material();
-            gunMaterial.color = Color.of(0.1,0.1,0.1,1);
-            gunMaterial.ambient = 0.5
-            gunMaterial.specularity = 0;
-            shapes.box.draw(graphics_state, gunMatrix, gunMaterial);
+            
 
         }
 

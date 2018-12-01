@@ -427,8 +427,8 @@ class Phong_Shader extends Shader          // THE DEFAULT SHADER: This uses the 
                                            // of the old color into the result.  Finally, an image is displayed onscreen.
 { material( color, properties )     // Define an internal class "Material" that stores the standard settings found in Phong lighting.
   { return new class Material       // Possible properties: ambient, diffusivity, specularity, smoothness, gouraud, texture.
-      { constructor( shader, color = Color.of( 0,0,0,1 ), ambient = 0, diffusivity = 1, specularity = 1, smoothness = 40 )
-          { Object.assign( this, { shader, color, ambient, diffusivity, specularity, smoothness } );  // Assign defaults.
+      { constructor( shader, color = Color.of( 0,0,0,1 ), ambient = 0, diffusivity = 1, specularity = 1, smoothness = 40, useFixed = false )
+          { Object.assign( this, { shader, color, ambient, diffusivity, specularity, smoothness, useFixed} );  // Assign defaults.
             Object.assign( this, properties );                                                        // Optionally override defaults.
           }
         override( properties )                      // Easily make temporary overridden versions of a base material, such as
@@ -532,7 +532,7 @@ class Phong_Shader extends Shader          // THE DEFAULT SHADER: This uses the 
     // Define how to synchronize our JavaScript's variables to the GPU's:
   update_GPU( g_state, model_transform, material, gpu = this.g_addrs, gl = this.gl )
     {                              // First, send the matrices to the GPU, additionally cache-ing some products of them we know we'll need:
-      this.update_matrices( g_state, model_transform, gpu, gl );
+      this.update_matrices( g_state, model_transform, gpu, gl, material.useFixed );
       gl.uniform1f ( gpu.animation_time_loc, g_state.animation_time / 1000 );
 
       if( g_state.gouraud === undefined ) { g_state.gouraud = g_state.color_normals = false; }    // Keep the flags seen by the shader 
@@ -563,17 +563,34 @@ class Phong_Shader extends Shader          // THE DEFAULT SHADER: This uses the 
       gl.uniform4fv( gpu.lightColor_loc,          lightColors_flattened );
       gl.uniform1fv( gpu.attenuation_factor_loc,  lightAttenuations_flattened );
     }
-  update_matrices( g_state, model_transform, gpu, gl )                                    // Helper function for sending matrices to GPU.
-    {                                                   // (PCM will mean Projection * Camera * Model)
-      let [ P, C, M ]    = [ g_state.projection_transform, g_state.camera_transform, model_transform ],
-            CM     =      C.times(  M ),
-            PCM    =      P.times( CM ),
-            inv_CM = Mat4.inverse( CM ).sub_block([0,0], [3,3]);
+  update_matrices( g_state, model_transform, gpu, gl, useFixed = false )                                    // Helper function for sending matrices to GPU.
+    {                      
+      
+      // (PCM will mean Projection * Camera * Model)
+      let [ P, C, M ]    = [ g_state.projection_transform, g_state.camera_transform, model_transform ];
+
+            //If use_fixed is set, we remove the translation from the camera matrix
+            if(useFixed){
+              C = C.copy();
+              C[0][3] = 0;
+              C[1][3] = 0;
+              C[2][3] = 0;
+              C[3][3] = 1;
+              C[3][0] = 0;
+              C[3][1] = 0;
+              C[3][2] = 0;
+            }
+      let   CM     =      C.times(  M );
+      let   PCM    =      P.times( CM );
+      let   inv_CM = Mat4.inverse( CM ).sub_block([0,0], [3,3]);
                                                                   // Send the current matrices to the shader.  Go ahead and pre-compute
                                                                   // the products we'll need of the of the three special matrices and just
                                                                   // cache and send those.  They will be the same throughout this draw
                                                                   // call, and thus across each instance of the vertex shader.
                                                                   // Transpose them since the GPU expects matrices as column-major arrays.                                  
+      
+      
+      
       gl.uniformMatrix4fv( gpu.camera_transform_loc,                  false, Mat.flatten_2D_to_1D(     C .transposed() ) );
       gl.uniformMatrix4fv( gpu.camera_model_transform_loc,            false, Mat.flatten_2D_to_1D(     CM.transposed() ) );
       gl.uniformMatrix4fv( gpu.projection_camera_model_transform_loc, false, Mat.flatten_2D_to_1D(    PCM.transposed() ) );
@@ -720,4 +737,109 @@ class Global_Info_Table extends Scene_Component                 // A class that 
       }
       this.live_string( box => show_object( box, this.current_object ) );      
     }
+}
+
+/** CODE from TAs to load .obj files */
+window.Fake_Bump_Map = window.classes.Fake_Bump_Map = 
+class Fake_Bump_Map extends Phong_Shader                         // Same as Phong_Shader, except this adds one line of code.
+{ fragment_glsl_code()           // ********* FRAGMENT SHADER ********* 
+    { return `
+        uniform sampler2D texture;
+        void main()
+        { if( GOURAUD || COLOR_NORMALS )    // Do smooth "Phong" shading unless options like "Gouraud mode" are wanted instead.
+          { gl_FragColor = VERTEX_COLOR;    // Otherwise, we already have final colors to smear (interpolate) across vertices.            
+            return;
+          }                                 // If we get this far, calculate Smooth "Phong" Shading as opposed to Gouraud Shading.
+                                            // Phong shading is not to be confused with the Phong Reflection Model.
+          
+          vec4 tex_color = texture2D( texture, f_tex_coord );                    // Use texturing as well.
+          vec3 bumped_N  = normalize( N + tex_color.rgb - .5*vec3(1,1,1) );      // Slightly disturb normals based on sampling
+                                                                                 // the same image that was used for texturing.
+                                                                                 
+                                                                                 // Compute an initial (ambient) color:
+          if( USE_TEXTURE ) gl_FragColor = vec4( ( tex_color.xyz + shapeColor.xyz ) * ambient, shapeColor.w * tex_color.w ); 
+          else gl_FragColor = vec4( shapeColor.xyz * ambient, shapeColor.w );
+          gl_FragColor.xyz += phong_model_lights( bumped_N );                    // Compute the final color with contributions from lights.
+        }`;
+    }
+}
+
+window.Shape_From_File = window.classes.Shape_From_File = 
+class Shape_From_File extends Shape          // A versatile standalone Shape that imports all its arrays' data from an .obj 3D model file.
+{ constructor( filename )
+    { super( "positions", "normals", "texture_coords" );
+      this.load_file( filename );      // Begin downloading the mesh. Once that completes, return control to our parse_into_mesh function.
+    }
+  load_file( filename )
+      { return fetch( filename )       // Request the external file and wait for it to load.
+          .then( response =>
+            { if ( response.ok )  return Promise.resolve( response.text() )
+              else                return Promise.reject ( response.status )
+            })
+          .then( obj_file_contents => this.parse_into_mesh( obj_file_contents ) )
+          .catch( error => { this.copy_onto_graphics_card( this.gl ); } )                     // Failure mode:  Loads an empty shape.
+      }
+  parse_into_mesh( data )                                           // Adapted from the "webgl-obj-loader.js" library found online:
+    { var verts = [], vertNormals = [], textures = [], unpacked = {};   
+
+      unpacked.verts = [];        unpacked.norms = [];    unpacked.textures = [];
+      unpacked.hashindices = {};  unpacked.indices = [];  unpacked.index = 0;
+
+      var lines = data.split('\n');
+
+      var VERTEX_RE = /^v\s/;    var NORMAL_RE = /^vn\s/;    var TEXTURE_RE = /^vt\s/;
+      var FACE_RE = /^f\s/;      var WHITESPACE_RE = /\s+/;
+
+      for (var i = 0; i < lines.length; i++) {
+        var line = lines[i].trim();
+        var elements = line.split(WHITESPACE_RE);
+        elements.shift();
+
+        if      (VERTEX_RE.test(line))   verts.push.apply(verts, elements);
+        else if (NORMAL_RE.test(line))   vertNormals.push.apply(vertNormals, elements);
+        else if (TEXTURE_RE.test(line))  textures.push.apply(textures, elements);
+        else if (FACE_RE.test(line)) {
+          var quad = false;
+          for (var j = 0, eleLen = elements.length; j < eleLen; j++)
+          {
+              if(j === 3 && !quad) {  j = 2;  quad = true;  }
+              if(elements[j] in unpacked.hashindices) 
+                  unpacked.indices.push(unpacked.hashindices[elements[j]]);
+              else
+              {
+                  var vertex = elements[ j ].split( '/' );
+
+                  unpacked.verts.push(+verts[(vertex[0] - 1) * 3 + 0]);   unpacked.verts.push(+verts[(vertex[0] - 1) * 3 + 1]);   
+                  unpacked.verts.push(+verts[(vertex[0] - 1) * 3 + 2]);
+                  
+                  if (textures.length) 
+                    {   unpacked.textures.push(+textures[( (vertex[1] - 1)||vertex[0]) * 2 + 0]);
+                        unpacked.textures.push(+textures[( (vertex[1] - 1)||vertex[0]) * 2 + 1]);  }
+                  
+                  unpacked.norms.push(+vertNormals[( (vertex[2] - 1)||vertex[0]) * 3 + 0]);
+                  unpacked.norms.push(+vertNormals[( (vertex[2] - 1)||vertex[0]) * 3 + 1]);
+                  unpacked.norms.push(+vertNormals[( (vertex[2] - 1)||vertex[0]) * 3 + 2]);
+                  
+                  unpacked.hashindices[elements[j]] = unpacked.index;
+                  unpacked.indices.push(unpacked.index);
+                  unpacked.index += 1;
+              }
+              if(j === 3 && quad)   unpacked.indices.push( unpacked.hashindices[elements[0]]);
+          }
+        }
+      }
+      for( var j = 0; j < unpacked.verts.length/3; j++ )
+      {
+        this.positions     .push( Vec.of( unpacked.verts[ 3*j ], unpacked.verts[ 3*j + 1 ], unpacked.verts[ 3*j + 2 ] ) );        
+        this.normals       .push( Vec.of( unpacked.norms[ 3*j ], unpacked.norms[ 3*j + 1 ], unpacked.norms[ 3*j + 2 ] ) );
+        this.texture_coords.push( Vec.of( unpacked.textures[ 2*j ], unpacked.textures[ 2*j + 1 ]  ));
+      }
+      this.indices = unpacked.indices;
+
+      this.normalize_positions( false );
+      this.copy_onto_graphics_card( this.gl );
+      this.ready = true;
+    }
+  draw( graphics_state, model_transform, material )       // Cancel all attempts to draw the shape before it loads.
+    { if( this.ready ) super.draw( graphics_state, model_transform, material );   }
 }

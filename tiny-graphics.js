@@ -248,12 +248,18 @@ class Vertex_Buffer           // To use Vertex_Buffer, make a subclass of it tha
       }
       this.gl = gl;
     }
-  execute_shaders( gl, type )     // Draws this shape's entire vertex buffer.
-    { if( this.indexed )
+  execute_shaders( gl, type )     // Draws this shape's entire vertex buffe
+    { 
+      
+    //Set Active Texture to 2 when drawing 
+      gl.activeTexture(gl.TEXTURE2);
+      if( this.indexed )
       { gl.bindBuffer( gl.ELEMENT_ARRAY_BUFFER, this.index_buffer );                          
         gl.drawElements( this.gl[type], this.indices.length, gl.UNSIGNED_INT, 0 ) 
       }                                                               // If no indices were provided, assume the vertices are arranged
       else  gl.drawArrays( this.gl[type], 0, this.positions.length );          // as triples of positions in a field called "positions".
+
+      gl.activeTexture(gl.TEXTURE0);
     }
   draw( graphics_state, model_transform, material, type = "TRIANGLES", gl = this.gl )        // To appear onscreen, a shape of any variety
     { if( !this.gl ) throw "This shape's arrays are not copied over to graphics card yet.";  // goes through this draw() function, which
@@ -470,6 +476,21 @@ class Webgl_Manager      // This class manages a whole graphics program for one 
            w.requestAnimationFrame    || w.webkitRequestAnimationFrame    // needed for queue-ing up re-display events:
         || w.mozRequestAnimationFrame || w.oRequestAnimationFrame || w.msRequestAnimationFrame
         || function( callback, element ) { w.setTimeout(callback, 1000/60);  } )( window );
+
+      //Create volumetric shading program
+      this.postProcessBundle = CreatePostProgram(gl);
+
+      //create skybox cube_map
+      const textureFiles = [ 
+        '/assets/skybox/bloody-heresy_rt.png',
+        '/assets/skybox/bloody-heresy_lf.png',
+        '/assets/skybox/bloody-heresy_up.png',
+        '/assets/skybox/bloody-heresy_dn.png',
+        '/assets/skybox/bloody-heresy_bk.png',
+        '/assets/skybox/bloody-heresy_ft.png'
+      ]
+      this.skyboxTexture = LoadSkyBoxTextures(gl, textureFiles );
+      this.skyboxBundle = CreateSkyboxProgram(gl);
     }
   set_size( dimensions = [ 1080, 600 ] )                // This function allows you to re-size the canvas anytime.  
     { const [ width, height ] = dimensions;             // To work, it must change the size in CSS, wait for style to re-flow, 
@@ -497,9 +518,40 @@ class Webgl_Manager      // This class manages a whole graphics program for one 
       this.prev_time = time;
 
       this.gl.clear( this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);        // Clear the canvas's pixels and z-buffer.
-     
+
       for( let live_string of document.querySelectorAll(".live_string") ) live_string.onload( live_string );
+
+      //Render scene to texture first to use for Volumetric lighting
+      let texture = this.gl.createTexture();
+      this.gl.activeTexture(this.gl.TEXTURE2);
+      this.gl.bindTexture(this.gl.TEXTURE_2D, texture);
+      this.gl.texImage2D(this.gl.TEXTURE_2D, 0 ,this.gl.RGBA, 1080*0.5, 600*0.5, 0, this.gl.RGBA, this.gl.UNSIGNED_BYTE, null );
+
+      // set the filtering so we don't need mips
+      this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.LINEAR);
+      this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_S, this.gl.CLAMP_TO_EDGE);
+      this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_T, this.gl.CLAMP_TO_EDGE);
+
+      let framebuffer = this.gl.createFramebuffer();
+      this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, framebuffer);
+      this.gl.framebufferTexture2D( this.gl.FRAMEBUFFER, this.gl.COLOR_ATTACHMENT0, 
+        this.gl.TEXTURE_2D, texture, 0 );
+
+      this.gl.viewport(0,0,1080*0.5, 600*0.5);
       for ( let s of this.scene_components ) s.display( this.globals.graphics_state );            // Draw each registered animation.
+
+      //Render scene normally
+      this.gl.bindFramebuffer( this.gl.FRAMEBUFFER, null);
+      this.gl.activeTexture(this.gl.TEXTURE0);
+      this.gl.viewport(0,0,1080, 600);
+
+      //Render skybox
+      this.gl.clear( this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);     
+      RenderSkyBox(this.gl, this.skyboxBundle, this.globals.graphics_state, this.skyboxTexture);
+      for ( let s of this.scene_components ) s.display( this.globals.graphics_state );            // Draw each registered animation.
+      //Render Volumetric Lighting in post processing
+      RenderPostProcessing(this.gl, this.postProcessBundle, this.globals.graphics_state);
+      //console.log(texture);
       this.event = window.requestAnimFrame( this.render.bind( this ) );   // Now that this frame is drawn, request that render() happen 
     }                                                                     // again as soon as all other web page events are processed.
 }

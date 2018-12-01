@@ -26,6 +26,8 @@ window.Target_Manager = window.classes.Target_Manager =
             this.generateTargets = this.generateTargets.bind(this);
             this.drawTargets = this.drawTargets.bind(this);
             this.randomCoord = this.randomCoord.bind(this);
+            this.moveWithinMap_xz = this.moveWithinMap_xz.bind(this);
+            this.moveWithinMap_y = this.moveWithinMap_y.bind(this);
 
             //create target array to keep track of the current targets and attach to context.globals
             this.activeTarget = [];
@@ -66,8 +68,13 @@ window.Target_Manager = window.classes.Target_Manager =
             let targetTransform1 = this.randomCoord().times(Mat4.scale([TARGET_SIZE, TARGET_SIZE, TARGET_SIZE]));
             let targetTransform2 = this.randomCoord().times(Mat4.scale([TARGET_SIZE, TARGET_SIZE, TARGET_SIZE]));
             
+            targetTransform1[0][3] = this.moveWithinMap_xz(targetTransform1[0][3]);
+            targetTransform1[2][3] = this.moveWithinMap_xz(targetTransform1[2][3]);
+            targetTransform1[1][3] = this.moveWithinMap_y(targetTransform1[1][3]);
 
-            //console.log(targetTransform1);
+            targetTransform2[0][3] = this.moveWithinMap_xz(targetTransform2[0][3]);
+            targetTransform2[2][3] = this.moveWithinMap_xz(targetTransform2[2][3]);
+            targetTransform2[1][3] = this.moveWithinMap_y(targetTransform2[1][3]);
 
             //create the target object to keep track of this bullet
             let target1 = {
@@ -86,6 +93,19 @@ window.Target_Manager = window.classes.Target_Manager =
                 this.activeTarget.push(target1);
                 this.activeTarget.push(target2);
             }
+        }
+
+        moveWithinMap_xz(pos) {
+                if(pos < -97.5)
+                        return -97.5
+                else if(pos > 97.5)
+                        return 97.5
+                return pos
+        }
+        moveWithinMap_y(pos) {
+                if(pos < 0)
+                        return 10
+                return pos
         }
 
         drawTargets(graphics_state, t) {

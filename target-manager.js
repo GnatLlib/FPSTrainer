@@ -48,6 +48,9 @@ window.Target_Manager = window.classes.Target_Manager =
             this.roundScore = 0;
             this.roundActive = false;  
             this.roundTargetsLeft = 0;
+
+            this.globals.totalShots = 0;
+            this.globals.totalHits = 0;
         }
 
         make_control_panel() {
@@ -72,6 +75,8 @@ window.Target_Manager = window.classes.Target_Manager =
                 this.roundActive = true;
                 this.roundScore = 0;
                 this.roundTargetsLeft = 20;
+                this.globals.totalShots = 0;
+                this.globals.totalHits = 0;
             }
         }
 
@@ -163,6 +168,7 @@ window.Target_Manager = window.classes.Target_Manager =
                         this.roundScore += score;   
                         console.log("score", score);
                         console.log("total score", this.roundScore);
+                        console.log("accuracy", this.globals.totalHits/this.globals.totalShots);
                         target.scored = true;
                     }
                 }

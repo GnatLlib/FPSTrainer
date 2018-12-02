@@ -116,6 +116,7 @@ class Aiming_Manager extends Scene_Component
             };
 
             this.activeBullets.push(bullet);
+            this.globals.totalShots += 1;
       
         }
 
@@ -128,7 +129,7 @@ class Aiming_Manager extends Scene_Component
                 var targetPos = Vec.of(target.location[0][3], target.location[1][3],target.location[2][3]);
                 var diff = targetPos.minus(bulletPos);
                 var distance = Math.sqrt(diff[0]*diff[0] + diff[1]*diff[1] + diff[2]*diff[2]);
-                if (distance <= 2.5)
+                if (distance <= 2.5 && target.hit != true)
                 {
                     target.hit = true;
                     target.hitTime = t;
@@ -155,6 +156,7 @@ class Aiming_Manager extends Scene_Component
                 //check to see if new bullet location is a collision
                 if (this.checkCollision(bulletTransform, t) == true){
                     this.activeBullets.shift();
+                    this.globals.totalHits += 1;
                     return;
                 }
 

@@ -49,14 +49,8 @@ window.Target_Manager = window.classes.Target_Manager =
             this.roundActive = false;  
             this.roundTargetsLeft = 0;
 
-            this.scoreElement = document.getElementById("score");
-            this.targetsElement = document.getElementById("targets");
-
-            this.scoreNode = document.createTextNode("");
-            this.targetsNode = document.createTextNode("");
-
-            this.scoreElement.appendChild(this.scoreNode);
-            this.targetsElement.appendChild(this.targetsNode);
+            this.globals.totalShots = 0;
+            this.globals.totalHits = 0;
         }
 
         make_control_panel() {
@@ -81,6 +75,8 @@ window.Target_Manager = window.classes.Target_Manager =
                 this.roundActive = true;
                 this.roundScore = 0;
                 this.roundTargetsLeft = 20;
+                this.globals.totalShots = 0;
+                this.globals.totalHits = 0;
             }
         }
 
@@ -172,6 +168,7 @@ window.Target_Manager = window.classes.Target_Manager =
                         this.roundScore += score;   
                         console.log("score", score);
                         console.log("total score", this.roundScore);
+                        console.log("accuracy", this.globals.totalHits/this.globals.totalShots);
                         target.scored = true;
                     }
                 }

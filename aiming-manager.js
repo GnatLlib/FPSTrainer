@@ -28,6 +28,7 @@ class Aiming_Manager extends Scene_Component
             this.handleMouseUp = this.handleMouseUp.bind(this);
             this.toggleZoom = this.toggleZoom.bind(this);
             this.drawBullets = this.drawBullets.bind(this);
+            this.drawGun = this.drawGun.bind(this);
 
             //add document listeners 
             document.addEventListener('mousedown', this.handleMouseDown);
@@ -42,12 +43,15 @@ class Aiming_Manager extends Scene_Component
 
             const shapes = {
                 bullet: new Subdivision_Sphere(4),
+                rifle: new Shape_From_File("/assets/M16.obj"),
             }
 
             this.submit_shapes(context, shapes);
             this.materials =
                 {
                     phong: context.get_instance(Phong_Shader).material(Color.of(0.5, 0.5, 0.5, 1), {ambient: 1}),
+                    gun: context.get_instance(Fake_Bump_Map).material( Color.of( 0,0,0,1),       
+            { ambient: 1, texture: this.context.get_instance( "/assets/M16_diffuse.jpeg" ) } )
                 };
 
                
@@ -165,9 +169,24 @@ class Aiming_Manager extends Scene_Component
                 bullet.location = bulletTransform;
              })
         }
+
+        drawGun(graphics_state){
+            
+            var gunTransform = this.context.globals.gunOffset;
+            var gunMatrix = Mat4.inverse(this.target()).times(gunTransform);
+               
+            var shapes = this.context.globals.shapes;
+            var materials = this.context.globals.materials;
+
+            
+    
+            this.shapes.rifle.draw(graphics_state, gunMatrix, this.materials.gun);
+        }
    
         display(graphics_state){
             const t = graphics_state.animation_time / 1000, dt = graphics_state.animation_delta_time / 1000;
+
+            this.drawGun(graphics_state);
             
             this.drawBullets(graphics_state, t, dt);
         

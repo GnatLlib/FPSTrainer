@@ -48,6 +48,15 @@ window.Target_Manager = window.classes.Target_Manager =
             this.roundScore = 0;
             this.roundActive = false;  
             this.roundTargetsLeft = 0;
+
+            this.scoreElement = document.getElementById("score");
+            this.targetsElement = document.getElementById("targets");
+
+            this.scoreNode = document.createTextNode("");
+            this.targetsNode = document.createTextNode("");
+
+            this.scoreElement.appendChild(this.scoreNode);
+            this.targetsElement.appendChild(this.targetsNode);
         }
 
         make_control_panel() {
@@ -186,7 +195,10 @@ window.Target_Manager = window.classes.Target_Manager =
                 if (this.roundTargetsLeft <= 0)
                     this.endRound();
             }
-
             this.drawTargets(graphics_state, t);
+
+            this.scoreNode.nodeValue = this.roundScore;
+            this.targetsNode.nodeValue = this.roundTargetsLeft;
+               
         }
     }

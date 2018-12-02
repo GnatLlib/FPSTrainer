@@ -68,7 +68,7 @@ class Map_Environment extends Scene_Component
 
             // Sun
             var sun_material = this.context.get_instance(Phong_Shader).material()
-                .override({ useFixed: true});
+                .override({ useFixed: true, alwaysWhite:true});
             sun_material.color = Color.of(255/255,255/255,255/255,1);
             sun_material.diffusivity = 0;
             sun_material.ambient = 1;
@@ -83,8 +83,8 @@ class Map_Environment extends Scene_Component
             target_material.color = Color.of(125/255,115/255,115/255,1);
             target_material.ambient = 1;
 
-            this.add_object("target", [1, 10, 4], [10, 0, 0], this.shapes.box, target_material, Mat4.rotation(1, Vec.of(0,1,0)));
-            this.add_object("target", [1, 10, 4], [20, 0, 20], this.shapes.box, target_material, Mat4.rotation(2, Vec.of(0,1,0)));
+            this.add_object("target", [1, 10, 4], [10, 10, 0], this.shapes.box, target_material, Mat4.rotation(1, Vec.of(0,1,0)));
+            this.add_object("target", [1, 10, 4], [20, 10, 20], this.shapes.box, target_material, Mat4.rotation(2, Vec.of(0,1,0)));
         }
 
         
@@ -99,18 +99,28 @@ class Map_Environment extends Scene_Component
                 const part_mat4 = part.rotation.times(Mat4.translation(part.position))
                                                .times(Mat4.scale(part.size));
 
-                /* !-- VERY HACKY delay rendering of sun and save for rendering with volumetric lighting
+                /* !-- VERY HACKY delay rendering of sun for rendering with volumetric lighting
                         This is done to avoid the lag between rendering the sun object and rendering the volumetric lighting 
                         */
-                if(part.name == "sun"){
+                if(part.name === "sun"){
                     this.context.globals.graphics_state.sunRender = () => {
                         part.shapes.draw(graphics_state, part_mat4, part.material);
                     }
                     
                 }
+                 /* !-- Doing hacky thing again with the ground for shadow rendering lol
+                */
+                else if (part.name === "base"){
+                    this.context.globals.graphics_state.groundRender = () => {
+                        part.shapes.draw(graphics_state, part_mat4, part.material);
+                    }
+                }
                 else {
                     part.shapes.draw(graphics_state, part_mat4, part.material);
                 }
+
+               
+            
             })
         }
 }

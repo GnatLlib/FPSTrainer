@@ -427,8 +427,8 @@ class Phong_Shader extends Shader          // THE DEFAULT SHADER: This uses the 
                                            // of the old color into the result.  Finally, an image is displayed onscreen.
 { material( color, properties )     // Define an internal class "Material" that stores the standard settings found in Phong lighting.
   { return new class Material       // Possible properties: ambient, diffusivity, specularity, smoothness, gouraud, texture.
-      { constructor( shader, color = Color.of( 0,0,0,1 ), ambient = 0, diffusivity = 1, specularity = 1, smoothness = 40, useFixed = false )
-          { Object.assign( this, { shader, color, ambient, diffusivity, specularity, smoothness, useFixed} );  // Assign defaults.
+      { constructor( shader, color = Color.of( 0,0,0,1 ), ambient = 0, diffusivity = 1, specularity = 1, smoothness = 40, useFixed = false, alwaysWhite=false )
+          { Object.assign( this, { shader, color, ambient, diffusivity, specularity, smoothness, useFixed, alwaysWhite} );  // Assign defaults.
             Object.assign( this, properties );                                                        // Optionally override defaults.
           }
         override( properties )                      // Easily make temporary overridden versions of a base material, such as
@@ -455,7 +455,9 @@ class Phong_Shader extends Shader          // THE DEFAULT SHADER: This uses the 
         varying vec4 VERTEX_COLOR;            // pixel fragment's proximity to each of the 3 vertices (barycentric interpolation).
         varying vec3 L[N_LIGHTS], H[N_LIGHTS];
         varying float dist[N_LIGHTS];
-        
+        varying vec4 shadowPos;
+        varying vec2 vDepthUv;
+
         vec3 phong_model_lights( vec3 N )
           { vec3 result = vec3(0.0);
             for(int i = 0; i < N_LIGHTS; i++)
@@ -478,8 +480,18 @@ class Phong_Shader extends Shader          // THE DEFAULT SHADER: This uses the 
         uniform mat4 camera_transform, camera_model_transform, projection_camera_model_transform;
         uniform mat3 inverse_transpose_modelview;
 
+        uniform mat4 light_modelview;
+        uniform mat4 light_projection;
+
+        const mat4 texUnitConverter = mat4(0.5, 0.0, 0.0, 0.0, 0.0, 0.5, 
+          0.0, 0.0, 0.0, 0.0, 0.5, 0.0, 0.5, 0.5, 0.5, 1.0);
+
         void main()
-        { gl_Position = projection_camera_model_transform * vec4(object_space_pos, 1.0);     // The vertex's final resting place (in NDCS).
+        { 
+          //calc shadowPos
+          shadowPos = texUnitConverter * light_projection * light_modelview * vec4(object_space_pos, 1.0);
+          gl_Position = projection_camera_model_transform * vec4(object_space_pos, 1.0);     // The vertex's final resting place (in NDCS).
+          
           N = normalize( inverse_transpose_modelview * normal );                             // The final normal vector in screen space.
           f_tex_coord = tex_coord;                                         // Directly use original texture coords and interpolate between.
           
@@ -509,6 +521,8 @@ class Phong_Shader extends Shader          // THE DEFAULT SHADER: This uses the 
             VERTEX_COLOR      = vec4( shapeColor.xyz * ambient, shapeColor.w);
             VERTEX_COLOR.xyz += phong_model_lights( N );
           }
+
+          
         }`;
     }
   fragment_glsl_code()           // ********* FRAGMENT SHADER ********* 
@@ -516,8 +530,25 @@ class Phong_Shader extends Shader          // THE DEFAULT SHADER: This uses the 
                                  // Fragments affect the final image or get discarded due to depth.
       return `
         uniform sampler2D texture;
+        uniform sampler2D depthColorTexture;
+        uniform bool OCCLUSION_PASS;
+
+        float decodeFloat (vec4 color) {
+          const vec4 bitShift = vec4(
+            1.0 / (256.0 * 256.0 * 256.0),
+            1.0 / (256.0 * 256.0),
+            1.0 / 256.0,
+            1
+          );
+          return dot(color, bitShift);
+        }
+
         void main()
-        { if( GOURAUD || COLOR_NORMALS )    // Do smooth "Phong" shading unless options like "Gouraud mode" are wanted instead.
+        { 
+          if (OCCLUSION_PASS){
+            gl_FragColor = vec4(0.0,0.0,0.0,1.0);
+          }
+          if( GOURAUD || COLOR_NORMALS )    // Do smooth "Phong" shading unless options like "Gouraud mode" are wanted instead.
           { gl_FragColor = VERTEX_COLOR;    // Otherwise, we already have final colors to smear (interpolate) across vertices.            
             return;
           }                                 // If we get this far, calculate Smooth "Phong" Shading as opposed to Gouraud Shading.
@@ -527,6 +558,29 @@ class Phong_Shader extends Shader          // THE DEFAULT SHADER: This uses the 
           if( USE_TEXTURE ) gl_FragColor = vec4( ( tex_color.xyz + shapeColor.xyz ) * ambient, shapeColor.w * tex_color.w ); 
           else gl_FragColor = vec4( shapeColor.xyz * ambient, shapeColor.w );
           gl_FragColor.xyz += phong_model_lights( N );                     // Compute the final color with contributions from lights.
+
+
+          //compute color darkening from shadow
+          vec3 fragmentDepth = shadowPos.xyz;
+          float shadowAcneRemover = 0.001;
+          fragmentDepth.z -= shadowAcneRemover;
+
+          float texelSize = 1.0 / 1024.0;
+          float amountInLight = 0.0;
+
+          for (int x = -3; x <= 3; x++) {
+            for (int y = -3; y <= 3; y++) {
+              float texelDepth = decodeFloat(texture2D(depthColorTexture,
+              fragmentDepth.xy + vec2(x, y) * texelSize));
+              if (fragmentDepth.z < texelDepth) {
+                amountInLight += 1.0;
+              }
+            }
+          }
+          amountInLight /= 49.0;
+          
+          gl_FragColor = vec4(amountInLight * gl_FragColor.xyz, 1.0);
+    
         }`;
     }
     // Define how to synchronize our JavaScript's variables to the GPU's:
@@ -544,6 +598,23 @@ class Phong_Shader extends Shader          // THE DEFAULT SHADER: This uses the 
       gl.uniform1f ( gpu.diffusivity_loc,    material.diffusivity );    // Phong lighting formula.
       gl.uniform1f ( gpu.specularity_loc,    material.specularity );
       gl.uniform1f ( gpu.smoothness_loc,     material.smoothness  );
+
+      //Check to see if we are in occlusion pass
+      if(g_state.occlusionPass){
+        if (material.alwaysWhite){
+          gl.uniform1f (gpu.OCCLUSION_PASS_loc, 0);
+        }
+        else {
+          gl.uniform1f (gpu.OCCLUSION_PASS_loc, 1);
+        }
+      }
+      else{
+        gl.uniform1f (gpu.OCCLUSION_PASS_loc, 0);
+      }
+
+      //send the uniforms needed to render shadows
+      //send shadowmap texture location 
+      gl.uniform1i(gpu.depthColorTexture_loc, 4);
 
       if( material.texture )                           // NOTE: To signal not to draw a texture, omit the texture parameter from Materials.
       { gpu.shader_attributes["tex_coord"].enabled = true;
@@ -565,7 +636,17 @@ class Phong_Shader extends Shader          // THE DEFAULT SHADER: This uses the 
     }
   update_matrices( g_state, model_transform, gpu, gl, useFixed = false )                                    // Helper function for sending matrices to GPU.
     {                      
-      
+  
+      //get orthographic projection
+      let LP = Mat4.orthographic(-150,150,-150,150,-300,300);
+
+      //get light view matrix
+      let LC = Mat4.look_at(g_state.sunPosition, Vec.of(0,0,0), Vec.of(0,1,0)).times(model_transform);
+    
+      //send light transforms to gpu
+      gl.uniformMatrix4fv(gpu.light_modelview_loc, false, Mat.flatten_2D_to_1D(LC.transposed()));
+      gl.uniformMatrix4fv(gpu.light_projection_loc, false, Mat.flatten_2D_to_1D( LP.transposed() ));
+
       // (PCM will mean Projection * Camera * Model)
       let [ P, C, M ]    = [ g_state.projection_transform, g_state.camera_transform, model_transform ];
 

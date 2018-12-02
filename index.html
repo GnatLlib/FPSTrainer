@@ -1,6 +1,46 @@
 <!-- Graphics Example Code.  index.html - The web page document containing the canvas (drawing surface), that launches your javascript files. //-->
 <!DOCTYPE html> <html> <head> <meta charset="UTF-8"/> <link rel="icon" href="assets/fav.ico">
 
+<!-- Custom Shaders for Shadow Map Rendering -->
+<script id = "shadowmap_vert" type = "x-shader/x-vertex">
+    attribute vec3 aPosition;
+
+    uniform mat4 projection;
+    uniform mat4 modelview;
+
+
+    void main() {
+        gl_Position = projection * modelview * vec4(aPosition, 1.0);
+    
+    }
+</script>
+
+<script id = "shadowmap_frag" type = "x-shader/x-vertex">
+    precision mediump float;
+
+    vec4 encodeFloat (float depth) {
+        const vec4 bitShift = vec4(
+          256 * 256 * 256,
+          256 * 256,
+          256,
+          1.0
+        );
+        const vec4 bitMask = vec4(
+          0,
+          1.0 / 256.0,
+          1.0 / 256.0,
+          1.0 / 256.0
+        );
+        vec4 comp = fract(depth * bitShift);
+        comp -= comp.xxyz * bitMask;
+        return comp;
+      }
+
+    void main(){
+        gl_FragColor = encodeFloat(gl_FragCoord.z);
+    }
+</script>
+
 <!--  Custom Shaders for Skybox Rendering-->
 <script id = "skybox_vert", type = "x-shader/x-vertex">
     precision mediump float;
@@ -13,7 +53,7 @@
 
     void main(){
         texCoords = aPosition;
-        gl_Position = projection * vec4(aPosition, 1.0);
+        gl_Position = projection * view * vec4(aPosition, 1.0);
         //gl_Position = vec4(aPosition, 1.0);
     }
 </script>
@@ -68,6 +108,8 @@
     vec2 lightPosition,
     vec2 uv
     ) {
+
+        
 
     vec3 fragColor = vec3(0.0,0.0,0.0);
 
@@ -129,7 +171,8 @@
 <script src = "aiming-manager.js"></script>
 <script src = "target-manager.js"></script>
 <script src = "volumetric-lighting.js"></script>
-<script src = "skybox.js"></script> </head>
+<script src = "skybox.js"></script> 
+<script src = "shadow-mapping.js"></script></head>
 <body style="background: DarkGray">       <!-- Begin typing your web page here. //-->
 
                               <!-- The following code embeds a WebGL canvas panel widget with certain scenes and their controls. //-->

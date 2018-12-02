@@ -262,7 +262,16 @@ class Vertex_Buffer           // To use Vertex_Buffer, make a subclass of it tha
       gl.activeTexture(gl.TEXTURE0);
     }
   draw( graphics_state, model_transform, material, type = "TRIANGLES", gl = this.gl )        // To appear onscreen, a shape of any variety
-    { if( !this.gl ) throw "This shape's arrays are not copied over to graphics card yet.";  // goes through this draw() function, which
+    { 
+      //If we are in the shadow pass, we will use the DrawShadowMap program
+      if(graphics_state.shadowPass){
+        DrawShadowMap(graphics_state, model_transform, gl, this);
+        return;
+      }
+      
+      
+      
+      if( !this.gl ) throw "This shape's arrays are not copied over to graphics card yet.";  // goes through this draw() function, which
       material.shader.activate();                                                            // executes the shader programs.  The shaders
       material.shader.update_GPU( graphics_state, model_transform, material );               // draw the right shape due to pre-selecting
                                                                                              // the correct buffer region in the GPU that
@@ -477,6 +486,11 @@ class Webgl_Manager      // This class manages a whole graphics program for one 
         || w.mozRequestAnimationFrame || w.oRequestAnimationFrame || w.msRequestAnimationFrame
         || function( callback, element ) { w.setTimeout(callback, 1000/60);  } )( window );
 
+      //Create shadowmaping program
+      /* Unfortunately we are saving the shadowmap program bundle in graphics_state. It is very hacky
+        but is the easiest way to pass the bundle into VertexBuffer.draw() without major refactor */
+      this.globals.graphics_state.shadowmapBundle = CreateShadowProgram(gl);
+      this.globals.graphics_state.shadowPass = false;
       //Create volumetric shading program
       this.postProcessBundle = CreatePostProgram(gl);
 
@@ -517,14 +531,39 @@ class Webgl_Manager      // This class manages a whole graphics program for one 
       if( this.globals.animate ) this.globals.graphics_state.animation_time      += this.globals.graphics_state.animation_delta_time;
       this.prev_time = time;
 
-      this.gl.clear( this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);        // Clear the canvas's pixels and z-buffer.
+      //this.gl.clear( this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);        // Clear the canvas's pixels and z-buffer.
 
       for( let live_string of document.querySelectorAll(".live_string") ) live_string.onload( live_string );
+  
+      //Render scene shadowmap
+      let shadowTexture = this.gl.createTexture();
+      this.gl.activeTexture(this.gl.TEXTURE4);
+      this.gl.bindTexture(this.gl.TEXTURE_2D, shadowTexture);
+      this.gl.texImage2D(this.gl.TEXTURE_2D, 0 ,this.gl.RGBA, 1024,1024, 0, this.gl.RGBA, this.gl.UNSIGNED_BYTE, null );
+
+      this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MAG_FILTER, this.gl.NEAREST)
+      this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.NEAREST)
+      let shadowFramebuffer = this.gl.createFramebuffer();
+      this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, shadowFramebuffer);
+      this.gl.framebufferTexture2D( this.gl.FRAMEBUFFER, this.gl.COLOR_ATTACHMENT0, 
+        this.gl.TEXTURE_2D, shadowTexture, 0 );
+      
+      this.gl.viewport(0,0,1024,1024);
+      this.gl.clearColor(0, 0, 0, 1)
+      this.gl.clearDepth(1.0)
+      this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT)
+      this.globals.graphics_state.shadowPass = true;
+      for ( let s of this.scene_components ) s.display( this.globals.graphics_state );  
+      this.globals.graphics_state.shadowPass = false;
+
+      this.gl.bindFramebuffer( this.gl.FRAMEBUFFER, null);
+      this.gl.activeTexture(this.gl.TEXTURE0);
+      this.gl.viewport(0,0,1080, 600);
 
       //Render scene to texture first to use for Volumetric lighting
-      let texture = this.gl.createTexture();
+      let occlusionTexture = this.gl.createTexture();
       this.gl.activeTexture(this.gl.TEXTURE2);
-      this.gl.bindTexture(this.gl.TEXTURE_2D, texture);
+      this.gl.bindTexture(this.gl.TEXTURE_2D, occlusionTexture);
       this.gl.texImage2D(this.gl.TEXTURE_2D, 0 ,this.gl.RGBA, 1080*0.5, 600*0.5, 0, this.gl.RGBA, this.gl.UNSIGNED_BYTE, null );
 
       // set the filtering so we don't need mips
@@ -535,24 +574,27 @@ class Webgl_Manager      // This class manages a whole graphics program for one 
       let framebuffer = this.gl.createFramebuffer();
       this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, framebuffer);
       this.gl.framebufferTexture2D( this.gl.FRAMEBUFFER, this.gl.COLOR_ATTACHMENT0, 
-        this.gl.TEXTURE_2D, texture, 0 );
+        this.gl.TEXTURE_2D, occlusionTexture, 0 );
 
       this.gl.viewport(0,0,1080*0.5, 600*0.5);
+      this.globals.graphics_state.occlusionPass = true;
+      this.globals.graphics_state.sunRender(); 
       for ( let s of this.scene_components ) s.display( this.globals.graphics_state );  
-      this.globals.graphics_state.sunRender();          // Draw each registered animation.
-
+               // Draw each registered animation.
+      this.globals.graphics_state.occlusionPass = false;
       //Render scene normally
       this.gl.bindFramebuffer( this.gl.FRAMEBUFFER, null);
       this.gl.activeTexture(this.gl.TEXTURE0);
       this.gl.viewport(0,0,1080, 600);
 
       //Render skybox
-      this.gl.clear( this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);     
+        
       RenderSkyBox(this.gl, this.skyboxBundle, this.globals.graphics_state, this.skyboxTexture);
       for ( let s of this.scene_components ) s.display( this.globals.graphics_state );            // Draw each registered animation.
+      this.globals.graphics_state.groundRender();
       //Render Volumetric Lighting in post processing
       RenderPostProcessing(this.gl, this.postProcessBundle, this.globals.graphics_state);
-      //console.log(texture);
+
       this.event = window.requestAnimFrame( this.render.bind( this ) );   // Now that this frame is drawn, request that render() happen 
     }                                                                     // again as soon as all other web page events are processed.
 }

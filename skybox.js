@@ -165,10 +165,8 @@ const RenderSkyBox = (gl, skyboxBundle, graphicsState, skyboxTexture) => {
      C[3][1] = 0;
      C[3][2] = 0;
 
-     PC = P.times(C);
-   
-     gl.uniformMatrix4fv(uniforms.projection, false, Mat.flatten_2D_to_1D(PC.transposed()));
-     gl.uniformMatrix4fv(uniforms.camera, false, Mat.flatten_2D_to_1D( C .transposed() ));
+     gl.uniformMatrix4fv(uniforms.projection, false, Mat.flatten_2D_to_1D(P.transposed()));
+     gl.uniformMatrix4fv(uniforms.view, false, Mat.flatten_2D_to_1D( C .transposed() ));
      gl.uniform1i(uniforms.skyboxTex, 1);
 
 

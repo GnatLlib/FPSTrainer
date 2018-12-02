@@ -98,7 +98,7 @@ const RenderPostProcessing = (gl, postProcessBundle, graphicsState) => {
     }
 
     //draw the sun
-    graphicsState.sunRender();
+    //graphicsState.sunRender();
     
     //vertices for a rectangle that covers the entire viewport
     var vertices = [
@@ -139,7 +139,7 @@ const RenderPostProcessing = (gl, postProcessBundle, graphicsState) => {
      gl.useProgram(postProcessProgram);
 
      gl.uniform1f(uniforms.density, 1.0);
-     gl.uniform1f(uniforms.weight, 0.01);
+     gl.uniform1f(uniforms.weight, 0.008);
      gl.uniform1f(uniforms.decay, 1.0);
      gl.uniform1f(uniforms.exposure, 1.0);
      gl.uniform1i(uniforms.numSamples, 100);
@@ -181,6 +181,5 @@ const RenderPostProcessing = (gl, postProcessBundle, graphicsState) => {
      //gl.drawArrays(gl.TRIANGLES, 0, 3);
      gl.disable(gl.BLEND);
    
-
 }
 

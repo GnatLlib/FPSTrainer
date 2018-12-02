@@ -49,6 +49,18 @@ window.Target_Manager = window.classes.Target_Manager =
             this.roundActive = false;  
             this.roundTargetsLeft = 0;
 
+            this.scoreElement = document.getElementById("score");
+            this.targetsElement = document.getElementById("targets");
+            this.accuracyElement = document.getElementById("accuracy");
+
+            this.scoreNode = document.createTextNode("");
+            this.targetsNode = document.createTextNode("");
+            this.accuracyNode = document.createTextNode("");
+
+            this.scoreElement.appendChild(this.scoreNode);
+            this.targetsElement.appendChild(this.targetsNode);
+            this.accuracyElement.appendChild(this.accuracyNode);
+        
             this.globals.totalShots = 0;
             this.globals.totalHits = 0;
         }
@@ -196,6 +208,7 @@ window.Target_Manager = window.classes.Target_Manager =
 
             this.scoreNode.nodeValue = this.roundScore;
             this.targetsNode.nodeValue = this.roundTargetsLeft;
-               
+            let accuracy = this.globals.totalHits / this.globals.totalShots;
+            this.accuracyNode.nodeValue = accuracy.toFixed(2);
         }
     }

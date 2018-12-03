@@ -177,8 +177,6 @@ class Aiming_Manager extends Scene_Component
                
             var shapes = this.context.globals.shapes;
             var materials = this.context.globals.materials;
-
-            
     
             this.shapes.rifle.draw(graphics_state, gunMatrix, this.materials.gun);
         }

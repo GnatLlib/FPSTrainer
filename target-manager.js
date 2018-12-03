@@ -208,7 +208,7 @@ window.Target_Manager = window.classes.Target_Manager =
 
             this.scoreNode.nodeValue = this.roundScore;
             this.targetsNode.nodeValue = this.roundTargetsLeft;
-            let accuracy = this.globals.totalHits / this.globals.totalShots;
+            let accuracy = this.globals.totalShots == 0 ? 0 : (this.globals.totalHits / this.globals.totalShots);
             this.accuracyNode.nodeValue = accuracy.toFixed(2);
         }
     }

@@ -1,6 +1,6 @@
 //constant that define the zoom magnitude and speed for scoping
 const SCOPE_MAGNITUDE = 30;
-const ZOOM_SPEED = 300;
+const ZOOM_SPEED = 100;
 
 
 
@@ -114,6 +114,62 @@ class Camera_Movement extends Scene_Component
             //this.updateCameraView();
         }
 
+        // Camera Collision checks
+        handleCameraCollision()
+        { 
+            const cameraRadius = 4;
+            this.camVector[1] = -this.height;
+
+            this.context.globals.workspace.map( (part) => {
+                var xPos = -this.camVector[0];
+                var yPos = -this.camVector[1];
+                var zPos = -this.camVector[2];
+
+                var partPosition = part.position;
+                var partSize = part.size;
+
+                var xUpperBound = partPosition[0] + partSize[0] + cameraRadius;
+                var xLowerBound = partPosition[0] - partSize[0] - cameraRadius;
+
+                var yUpperBound = partPosition[1] + partSize[1];
+                var yLowerBound = partPosition[1] - partSize[1];
+
+                var zUpperBound = partPosition[2] + partSize[2] + cameraRadius;
+                var zLowerBound = partPosition[2] - partSize[2] - cameraRadius;
+                
+                if (part.name == "target"){
+                        console.log(part.name);
+                        console.log(part.position);
+                        console.log(this.camVector);
+                }
+                
+                if (xPos < xUpperBound && xPos > xLowerBound && zPos < zUpperBound && zPos > zLowerBound && yUpperBound > 0)
+                {
+                    // Camera is inside the box, push in the direction closest to the edge
+                    var xUpperDiff = Math.abs(xPos - xUpperBound);
+                    var xLowerDiff = Math.abs(xPos - xLowerBound);
+
+                    //var yUpperDiff = Math.abs(yPos - yUpperBound);
+                    //var yLowerDiff = Math.abs(yPos - yLowerBound);
+
+                    var zUpperDiff = Math.abs(zPos - zUpperBound);
+                    var zLowerDiff = Math.abs(zPos - zLowerBound);
+
+                    if (xUpperDiff < xLowerDiff && xUpperDiff < zUpperDiff && xUpperDiff < zLowerDiff)
+                        this.camVector[0] = -xUpperBound;
+                    else if (xLowerDiff < xUpperDiff && xLowerDiff < zUpperDiff && xLowerDiff < zLowerDiff)
+                        this.camVector[0] = -xLowerBound;
+                    else if (zUpperDiff < zLowerDiff && zUpperDiff < xUpperDiff && zUpperDiff < xLowerDiff)
+                        this.camVector[2] = -zUpperBound;
+                    else if (zLowerDiff < zUpperDiff && zLowerDiff < xUpperDiff && zLowerDiff < xLowerDiff)
+                        this.camVector[2] = -zLowerBound;
+                }
+            })
+
+
+            /**/
+        }
+
         //Function to apply movement camera transforms to graphics_state.camera_transform
         applyMovementTransforms(){
             //Bind post_multiply operation to target and assign to doOperation
@@ -151,16 +207,7 @@ class Camera_Movement extends Scene_Component
 
 
             // HANDLE COLLISION TEMPORARILY HERE
-            const mapBound = 90;
-            this.camVector[1] = -this.height;
-            if (this.camVector[0] > mapBound)
-                this.camVector[0] = mapBound;
-            if (this.camVector[0] < -mapBound)
-                this.camVector[0] = -mapBound;
-            if (this.camVector[2] > mapBound)
-                this.camVector[2] = mapBound;
-            if (this.camVector[2] < -mapBound)
-                this.camVector[2] = -mapBound;
+            this.handleCameraCollision();
         }
 
         /*  Function to calculate the zoom transform to handle scoping. 
@@ -178,15 +225,18 @@ class Camera_Movement extends Scene_Component
 
             const updatedCurrentZoom = this.currentZoom + dt * ZOOM_SPEED * zoomDirection;
             
-            
+            const r = this.context.width / this.context.height;
             //if updatedCurrentZoom if <=0 or >= SCOPE_MAGNITUDE, do nothing, otherwise undate currentZoom and move camera
             if (updatedCurrentZoom > 0 && updatedCurrentZoom < SCOPE_MAGNITUDE){
                 this.currentZoom = updatedCurrentZoom;
-                this.camVector = this.camVector.plus(viewVector.times(dt * ZOOM_SPEED * zoomDirection));
+                //this.camVector = this.camVector.plus(viewVector.times(dt * ZOOM_SPEED * zoomDirection));
+
+                this.context.globals.graphics_state.projection_transform = Mat4.perspective(Math.PI / (4 + this.currentZoom*0.1), r, .1, 1000);
             }
             else{
                 if(updatedCurrentZoom< 0){
                     this.currentZoom = 0;
+                        this.context.globals.graphics_state.projection_transform = Mat4.perspective(Math.PI / (4 + this.currentZoom*0.1), r, .1, 1000);
                 }
                 else if (updatedCurrentZoom> SCOPE_MAGNITUDE){
                     this.currentZoom = SCOPE_MAGNITUDE;
@@ -195,7 +245,7 @@ class Camera_Movement extends Scene_Component
 
             //interpolate gunOffset to simulate raising gun to eye based on currentzoom 
             const zoomRatio = 1 - (this.currentZoom/SCOPE_MAGNITUDE);
-            this.context.globals.gunOffset = Mat4.translation([0 + 0.65 * zoomRatio, -0.55 - 0.1 * zoomRatio, -1.5 - 1.5* zoomRatio]).times(Mat4.scale([1.25,1.25,1.25,]));
+            this.context.globals.gunOffset = Mat4.translation([0 + 0.65 * zoomRatio, -0.55 - 0.1 * zoomRatio, -2 - 1* zoomRatio]).times(Mat4.scale([1.25,1.25,1.25,]));
 
         }
 

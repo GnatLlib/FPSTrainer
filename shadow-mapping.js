@@ -56,7 +56,7 @@ const DrawShadowMap = (graphicsState, model_transform, gl, shape) => {
     let M = model_transform;
 
     //get orthographic projection
-    let P = Mat4.orthographic(-150,150,-150,150,-300,300);
+    let P = Mat4.orthographic(-300,300,-300,300,-100,400);
     //let P = Mat4.orthographic(-40,40,-40,40,-40,80);
     //get light view matrix
     let C = Mat4.look_at(graphicsState.sunPosition, Vec.of(0,0,0), Vec.of(0,1,0));

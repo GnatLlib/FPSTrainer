@@ -533,6 +533,8 @@ class Phong_Shader extends Shader          // THE DEFAULT SHADER: This uses the 
         uniform sampler2D depthColorTexture;
         uniform bool OCCLUSION_PASS;
 
+        uniform bool SHADOWS_ON;
+
         float decodeFloat (vec4 color) {
           const vec4 bitShift = vec4(
             1.0 / (256.0 * 256.0 * 256.0),
@@ -568,23 +570,25 @@ class Phong_Shader extends Shader          // THE DEFAULT SHADER: This uses the 
           float texelSize = 1.0 / 1024.0;
           float amountInLight = 0.0;
 
-          for (int x = -3; x <= 3; x++) {
-            for (int y = -3; y <= 3; y++) {
-              float texelDepth = decodeFloat(texture2D(depthColorTexture,
-              fragmentDepth.xy + vec2(x, y) * texelSize));
-              if (fragmentDepth.z < texelDepth) {
-                amountInLight += 1.0;
+          if (SHADOWS_ON){
+            for (int x = -3; x <= 3; x++) {
+              for (int y = -3; y <= 3; y++) {
+                float texelDepth = decodeFloat(texture2D(depthColorTexture,
+                fragmentDepth.xy + vec2(x, y) * texelSize));
+                if (fragmentDepth.z < texelDepth) {
+                  amountInLight += 1.0;
+                }
               }
             }
+            amountInLight /= 49.0;
+            
+            //scale down darkening effect of shadows
+            amountInLight += 0.35;
+            if (amountInLight > 1.0){
+              amountInLight = 1.0;
+            }
+            gl_FragColor = vec4(amountInLight * gl_FragColor.xyz, 1.0);
           }
-          amountInLight /= 49.0;
-          
-          //scale down darkening effect of shadows
-          amountInLight += 0.35;
-          if (amountInLight > 1.0){
-            amountInLight = 1.0;
-          }
-          gl_FragColor = vec4(amountInLight * gl_FragColor.xyz, 1.0);
     
         }`;
     }
@@ -617,6 +621,13 @@ class Phong_Shader extends Shader          // THE DEFAULT SHADER: This uses the 
         gl.uniform1f (gpu.OCCLUSION_PASS_loc, 0);
       }
 
+      //see if shadows are on
+      if(g_state.shadowsOn){
+        gl.uniform1f(gpu.SHADOWS_ON_loc, 1);
+      }else{
+        gl.uniform1f(gpu.SHADOWS_ON_loc, 0);
+      }
+
       //send the uniforms needed to render shadows
       //send shadowmap texture location 
       gl.uniform1i(gpu.depthColorTexture_loc, 4);
@@ -643,7 +654,7 @@ class Phong_Shader extends Shader          // THE DEFAULT SHADER: This uses the 
     {                      
   
       //get orthographic projection
-      let LP = Mat4.orthographic(-150,150,-150,150,-300,300);
+      let LP = Mat4.orthographic(-300,300,-300,300,-100,400);
 
       //get light view matrix
       let LC = Mat4.look_at(g_state.sunPosition, Vec.of(0,0,0), Vec.of(0,1,0)).times(model_transform);

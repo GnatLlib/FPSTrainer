@@ -35,6 +35,12 @@ class Map_Environment extends Scene_Component
             this.build_map();
         }
 
+        make_control_panel() {
+            this.key_triggered_button( "Toggle Shadows",[ "t" ], () =>  {this.context.globals.graphics_state.shadowsOn = ! this.context.globals.graphics_state.shadowsOn});
+           
+         }
+
+
         add_object(name, size, position, shape, material, rotation){        
             if (rotation == null){
                rotation = Mat4.rotation(0, Vec.of(1,0,0));

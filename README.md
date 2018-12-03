@@ -9,7 +9,7 @@
 ## Contribution
 Bill Tang: Implementation of gun animation/firing, volumetric lighting, shadow-mapping, and skybox.
   </br>Harrison Yuan: Camera/player movement and jumping, map development, terrain generation, player-to-terrain collision, target collision, round scoring system
-  </br>Evan Kim: Contributed on camera(player) movement, target generation/management/collision, map development, and html overlay.
+  </br>Evan Kim: Contributed on camera(player) movement, target management, map development, and html overlay.
 
 ## Instructions
 To run the game, simply run the server by opening host.command or host.bat file. The game will run on localhost:8000.
@@ -41,4 +41,11 @@ We have two types of collisions in the game implemented separately.
 
 The first type of collision is a simplified spherical collision check for registering bullet hits on targets. The implementation is slightly hardcoded, relying on simply calculating the distance between the bullet and the target position. If the distance between the two is less than the sum of their radius/size, then we can assume that the bullet is definitely inside the target and has collided. The current limitation with this implementation is that as bullet velocity increases, the distances between each frame update step for the bullet position increase as well. If it gets too spaced apart, the bullet could pass through the target without ever being inside it.
 
-The second type of collision involves the camera/player position, checking for collisions with terrain blocks in the map as well as map boundaries and floor. In this implementation, we check if the camera position is about to be inside a given box based on its movement direction. If the camera is inside the box, we manually check for the closest face direction to push the camera out of the box along the box collision boundaries. In addtion, we added a small radius collision buffer on the x-z plane and some height for the camera, such that its collision shape can be described as an upright capsule-like shape. This is to prevent the camera and gun model from clipping into the faces boxes with the extra collision buffer zone and approximate a humanoid-like shape. To simplifiy implementation, this collision only works accurately on unrotated blocks. 
+The second type of collision involves the camera/player position, checking for collisions with terrain blocks in the map as well as map boundaries and floor. In this implementation, we check if the camera position is about to be inside a given box based on its movement direction. If the camera is inside the box, we check for the closest face direction to push the camera out of the box along the box collision boundaries. In addtion, we added a small collision radius buffer on the x-z plane and some height for the camera, such that its collision shape can be described as an upright capsule-like shape. This is to prevent the camera and gun model from clipping into the faces boxes with the extra collision buffer zone and approximate a humanoid-like shape. To simplifiy implementation, this collision only works accurately on unrotated blocks. 
+
+### Camera:
+Camera movement takes two inputs, the change in mouse.x and mouse.y positions.
+</br>Using change in mouse.x, we calculate a yaw rotation matrix and using change in mouse.y, we calculate a pitch matrix.
+</br>We multiply the two together to get the full rotation matrix.
+</br>After updating the camera transform based on user input controls on movement and current look direction of the camera, we retrieve the camera's updated translation matrix.
+</br>We update our final camera transform based on the full rotation matrix and the new translation matrix to complete our first person camera implementation.

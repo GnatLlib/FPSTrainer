@@ -82,7 +82,7 @@ class Camera_Movement extends Scene_Component
                     this.context.globals.pointerLocked = true;
 
                     //Show crosshair
-                    document.getElementById("crosshair").style.display = "block";
+                    //document.getElementById("crosshair").style.display = "block";
                 }
             //Otherwise, the lock was just deactivated
             else{
@@ -93,7 +93,7 @@ class Camera_Movement extends Scene_Component
                 this.context.globals.pointerLocked = false;
 
                 //Hide crosshair
-                document.getElementById("crosshair").style.display = "none";
+                //document.getElementById("crosshair").style.display = "none";
             }
         }
 
@@ -230,22 +230,29 @@ class Camera_Movement extends Scene_Component
             if (updatedCurrentZoom > 0 && updatedCurrentZoom < SCOPE_MAGNITUDE){
                 this.currentZoom = updatedCurrentZoom;
                 //this.camVector = this.camVector.plus(viewVector.times(dt * ZOOM_SPEED * zoomDirection));
-
-                this.context.globals.graphics_state.projection_transform = Mat4.perspective(Math.PI / (4 + this.currentZoom*0.1), r, .1, 1000);
             }
             else{
                 if(updatedCurrentZoom< 0){
                     this.currentZoom = 0;
-                        this.context.globals.graphics_state.projection_transform = Mat4.perspective(Math.PI / (4 + this.currentZoom*0.1), r, .1, 1000);
                 }
                 else if (updatedCurrentZoom> SCOPE_MAGNITUDE){
                     this.currentZoom = SCOPE_MAGNITUDE;
                 }
             }
 
+            if (this.context.globals.zoomed == true)
+            {
+                document.getElementById("crosshair").style.display = "none";
+            }
+            else
+            {
+                document.getElementById("crosshair").style.display = "block";
+            }
+
             //interpolate gunOffset to simulate raising gun to eye based on currentzoom 
             const zoomRatio = 1 - (this.currentZoom/SCOPE_MAGNITUDE);
             this.context.globals.gunOffset = Mat4.translation([0 + 0.65 * zoomRatio, -0.55 - 0.1 * zoomRatio, -2 - 1* zoomRatio]).times(Mat4.scale([1.25,1.25,1.25,]));
+            this.context.globals.graphics_state.projection_transform = Mat4.perspective(Math.PI / (4 + this.currentZoom*0.1), r, .1, 1000);
 
         }
 

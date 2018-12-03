@@ -19,7 +19,7 @@ To run the game, simply run the server by opening host.command or host.bat file.
   </br>To shoot, player simply needs to click the left mouse button. By clicking the right mouse button, player can zoom in their scope.
 
 ## Advanced topics covered: </br>
-collision of bullets and targets, collision of player and map objects
+- collisions of bullets to targets, camera/player to map objects
 - volumetric lighting
 - shadows
 - advanced camera movement

@@ -1,5 +1,5 @@
 //Global constants controlling bullet properties
-const BULLET_VELOCITY = 3000;
+const BULLET_VELOCITY = 2000;
 const BULLET_SIZE = 0.1;
 const BULLET_LIFETIME = 3;
 

@@ -81,7 +81,6 @@ window.Target_Manager = window.classes.Target_Manager =
 
         startRound()
         {
-            console.log("Start round");
             if (this.roundActive == false)
             {
                 this.roundActive = true;
@@ -94,7 +93,6 @@ window.Target_Manager = window.classes.Target_Manager =
 
         endRound()
         {
-            console.log("End round")
             this.roundActive = false;
             this.roundTargetsLeft = 0;
         }
@@ -144,9 +142,7 @@ window.Target_Manager = window.classes.Target_Manager =
                 var zLowerBound = partPosition[2] - partSize[2] - TARGET_SIZE;
                 
                 if (part.name == "target"){
-                        console.log(part.name);
-                        console.log(part.position);
-                        console.log(this.camVector);
+
                 }
                 
                 if (x1Pos < xUpperBound && x1Pos > xLowerBound && z1Pos < zUpperBound && z1Pos > zLowerBound && yUpperBound > 0)
@@ -221,7 +217,6 @@ window.Target_Manager = window.classes.Target_Manager =
                 this.activeTarget.push(target1);
                 this.activeTarget.push(target2);
                 this.roundTargetsLeft -= 2;
-                console.log(this.roundTargetsLeft + " targets left");
             }
         }
 
@@ -254,9 +249,6 @@ window.Target_Manager = window.classes.Target_Manager =
                     if (target.scored != true)
                     {
                         this.roundScore += score;   
-                        console.log("score", score);
-                        console.log("total score", this.roundScore);
-                        console.log("accuracy", this.globals.totalHits/this.globals.totalShots);
                         target.scored = true;
                     }
                 }

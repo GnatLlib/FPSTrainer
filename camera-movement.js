@@ -79,7 +79,7 @@ class Camera_Movement extends Scene_Component
             const t = this.context.globals.graphics_state.animation_time / 1000, dt = this.context.globals.graphics_state.animation_delta_time / 1000;
             if (t > this.lastJumpTime + this.jumpCoolDown)
             {
-                console.log("jump");
+
                 this.lastJumpTime = t;
             }
 

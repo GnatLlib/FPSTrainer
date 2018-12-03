@@ -29,14 +29,14 @@ class Map_Environment extends Scene_Component
             this.context.globals.graphics_state.sunPosition = Vec.of(50,100,100);
 
             //bind sunRender
-            this.context.globals.graphics_state.sunRender = () => {console.log("SUN RENDER")};
+            this.context.globals.graphics_state.sunRender = () => {};
         
             this.context.globals.workspace = [];
             this.build_map();
         }
 
         make_control_panel() {
-            this.key_triggered_button( "Toggle Shadows",[ "t" ], () =>  {this.context.globals.graphics_state.shadowsOn = ! this.context.globals.graphics_state.shadowsOn});
+            this.key_triggered_button( "Toggle Shadows",[ "o" ], () =>  {this.context.globals.graphics_state.shadowsOn = ! this.context.globals.graphics_state.shadowsOn});
            
          }
 
@@ -104,7 +104,7 @@ class Map_Environment extends Scene_Component
             var i = 0;
             for (i = 0; i < NUM_PARTS; i++)
             {
-                console.log("adding parts"+i);
+
                 var xSize = this.getRandomInt(1,20);
                 var ySize = this.getRandomInt(5,20);
                 var zSize = this.getRandomInt(1,20);

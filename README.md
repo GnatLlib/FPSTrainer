@@ -8,7 +8,7 @@
 
 ## Contribution
 Bill Tang: Implementation of gun animation/firing, volumetric lighting, shadow-mapping, and skybox.
-  </br>Harrison Yuan:
+  </br>Harrison Yuan: Camera/player movement and jumping, map development, terrain generation, player-to-terrain collision, target collision, round scoring system
   </br>Evan Kim: Contributed on camera(player) movement, target management, map development, and html overlay.
 
 ## Instructions
@@ -36,3 +36,9 @@ Skybox is implemented using a set of custom GLSL Shaders using WebGl's TEXTURE_C
 ### Shadows:
 Our attempt at shadow implementation is done through shadow-mapping. The scene is first rendered from the light source's view using a set of custom GLSL shaders that encodes the vertex depth into a shadow map texture. This texture is then used in a heavily modifed Phong GLSL shader to compute when a pixel should be darkened due to being in shadow. 
 
+### Collisions:
+We have two types of collisions in the game implemented separately.
+
+The first type of collision is a simplified spherical collision check for registering bullet hits on targets. The implementation is slightly hardcoded, relying on simply calculating the distance between the bullet and the target position. If the distance between the two is less than the sum of their radius/size, then we can assume that the bullet is definitely inside the target and has collided. The current limitation with this implementation is that as bullet velocity increases, the distances between each frame update step for the bullet position increase as well. If it gets too spaced apart, the bullet could pass through the target without ever being inside it.
+
+The second type of collision involves the camera/player position, checking for collisions with terrain blocks in the map as well as map boundaries and floor. In this implementation, we check if the camera position is about to be inside a given box based on its movement direction. If the camera is inside the box, we manually check for the closest face direction to push the camera out of the box along the box collision boundaries. In addtion, we added a small radius collision buffer on the x-z plane and some height for the camera, such that its collision shape can be described as an upright capsule-like shape. This is to prevent the camera and gun model from clipping into the faces boxes with the extra collision buffer zone and approximate a humanoid-like shape. To simplifiy implementation, this collision only works accurately on unrotated blocks. 

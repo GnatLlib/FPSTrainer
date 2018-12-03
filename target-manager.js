@@ -66,7 +66,7 @@ window.Target_Manager = window.classes.Target_Manager =
         }
 
         make_control_panel() {
-            this.key_triggered_button( "Begin round",[ " " ], () =>  this.startRound());  
+            this.key_triggered_button( "Begin round",[ "t" ], () =>  this.startRound());  
             this.new_line();
             this.new_line();
             
@@ -122,6 +122,82 @@ window.Target_Manager = window.classes.Target_Manager =
             let targetTransform1 = this.randomCoord().times(Mat4.scale([TARGET_SIZE, TARGET_SIZE, TARGET_SIZE]));
             let targetTransform2 = this.randomCoord().times(Mat4.scale([TARGET_SIZE, TARGET_SIZE, TARGET_SIZE]));
             
+            this.context.globals.workspace.map( (part) => {
+                var x1Pos = targetTransform1[0][3];
+                var y1Pos = targetTransform1[1][3];
+                var z1Pos = targetTransform1[2][3];
+
+                var x2Pos = targetTransform2[0][3];
+                var y2Pos = targetTransform2[1][3];
+                var z2Pos = targetTransform2[2][3];
+
+                var partPosition = part.position;
+                var partSize = part.size;
+
+                var xUpperBound = partPosition[0] + partSize[0] + TARGET_SIZE;
+                var xLowerBound = partPosition[0] - partSize[0] - TARGET_SIZE;
+
+                var yUpperBound = partPosition[1] + partSize[1] + TARGET_SIZE;
+                var yLowerBound = partPosition[1] - partSize[1] - TARGET_SIZE;
+
+                var zUpperBound = partPosition[2] + partSize[2] + TARGET_SIZE;
+                var zLowerBound = partPosition[2] - partSize[2] - TARGET_SIZE;
+                
+                if (part.name == "target"){
+                        console.log(part.name);
+                        console.log(part.position);
+                        console.log(this.camVector);
+                }
+                
+                if (x1Pos < xUpperBound && x1Pos > xLowerBound && z1Pos < zUpperBound && z1Pos > zLowerBound && yUpperBound > 0)
+                {
+                    // Camera is inside the box, push in the direction closest to the edge
+                    var x1UpperDiff = Math.abs(x1Pos - xUpperBound);
+                    var x1LowerDiff = Math.abs(x1Pos - xLowerBound);
+
+                    var y1UpperDiff = Math.abs(y1Pos - yUpperBound);
+                    var y1LowerDiff = Math.abs(y1Pos - yLowerBound);
+
+                    var z1UpperDiff = Math.abs(z1Pos - zUpperBound);
+                    var z1LowerDiff = Math.abs(z1Pos - zLowerBound);
+                     
+                    if (x1UpperDiff < x1LowerDiff && x1UpperDiff < z1UpperDiff && x1UpperDiff < z1LowerDiff)
+                        targetTransform1[0][3] = -xUpperBound;
+                    else if (x1LowerDiff < x1UpperDiff && x1LowerDiff < z1UpperDiff && x1LowerDiff < z1LowerDiff)
+                        targetTransform1[0][3] = -xLowerBound;
+                    else if (z1UpperDiff < z1LowerDiff && z1UpperDiff < x1UpperDiff && z1UpperDiff < x1LowerDiff)
+                        targetTransform1[2][3] = -zUpperBound;
+                    else if (z1LowerDiff < z1UpperDiff && z1LowerDiff < x1UpperDiff && z1LowerDiff < x1LowerDiff)
+                        targetTransform1[2][3] = -zLowerBound;
+                    else if (y1UpperDiff < z1UpperDiff && y1UpperDiff < z1LowerDiff && y1UpperDiff < x1UpperDiff && y1UpperDiff < x1LowerDiff)
+                        targetTransform1[1][3] = -yUpperBound;   
+                }
+                if (x2Pos < xUpperBound && x2Pos > xLowerBound && z2Pos < zUpperBound && z2Pos > zLowerBound && yUpperBound > 0)
+                {
+                    // Camera is inside the box, push in the direction closest to the edge
+                    var x2UpperDiff = Math.abs(x1Pos - xUpperBound);
+                    var x2LowerDiff = Math.abs(x1Pos - xLowerBound);
+
+                    var y2UpperDiff = Math.abs(y1Pos - yUpperBound);
+                    var y2LowerDiff = Math.abs(y1Pos - yLowerBound);
+
+                    var z2UpperDiff = Math.abs(z1Pos - zUpperBound);
+                    var z2LowerDiff = Math.abs(z1Pos - zLowerBound);
+                     
+                    if (x2UpperDiff < x2LowerDiff && x2UpperDiff < z2UpperDiff && x2UpperDiff < z2LowerDiff)
+                        targetTransform2[0][3] = -xUpperBound;
+                    else if (x2LowerDiff < x2UpperDiff && x2LowerDiff < z2UpperDiff && x2LowerDiff < z2LowerDiff)
+                        targetTransform2[0][3] = -xLowerBound;
+                    else if (z2UpperDiff < z2LowerDiff && z2UpperDiff < x2UpperDiff && z2UpperDiff < x2LowerDiff)
+                        targetTransform2[2][3] = -zUpperBound;
+                    else if (z2LowerDiff < z2UpperDiff && z2LowerDiff < x2UpperDiff && z2LowerDiff < x2LowerDiff)
+                        targetTransform2[2][3] = -zLowerBound;
+                    else if (y2UpperDiff < z2UpperDiff && y2UpperDiff < z2LowerDiff && y2UpperDiff < x2UpperDiff && y2UpperDiff < x2LowerDiff)
+                        targetTransform2[1][3] = -yUpperBound;   
+                }
+            })
+
+
             targetTransform1[0][3] = this.moveWithinMap_xz(targetTransform1[0][3]);
             targetTransform1[2][3] = this.moveWithinMap_xz(targetTransform1[2][3]);
             targetTransform1[1][3] = this.moveWithinMap_y(targetTransform1[1][3]);
@@ -150,10 +226,10 @@ window.Target_Manager = window.classes.Target_Manager =
         }
 
         moveWithinMap_xz(pos) {
-                if(pos < -97.5)
-                        return -97.5
-                else if(pos > 97.5)
-                        return 97.5
+                if(pos < -196.5)
+                        return -196.5
+                else if(pos > 196.5)
+                        return 196.5
                 return pos
         }
         moveWithinMap_y(pos) {

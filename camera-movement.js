@@ -1,7 +1,7 @@
 //constant that define the zoom magnitude and speed for scoping
 const SCOPE_MAGNITUDE = 30;
 const ZOOM_SPEED = 100;
-
+const GRAVITY = -2;
 
 
 window.Camera_Movement = window.classes.Camera_Movement = 
@@ -49,10 +49,14 @@ class Camera_Movement extends Scene_Component
             // Initialize zoom state variable 
             this.currentZoom = 0;
 
+            // Initialize jump states and parameters
+            this.lastJumpTime = 0;
+            this.jumpCoolDown = 0.5;
+            this.jumpForceTime = 0.5;
+            this.jumpForce = 7;
+
             // Initialize gun offset
             this.context.globals.gunOffset = Mat4.translation([0.65, -0.65, -3]).times(Mat4.scale([1.25,1.25,1.25,]));
-            
-           
 
         }
 
@@ -62,11 +66,23 @@ class Camera_Movement extends Scene_Component
             this.key_triggered_button( "Left",   [ "a" ], () =>  this.left =  true, undefined, () => this.left = false );
             this.key_triggered_button( "Back",   [ "s" ], () =>  this.back = true, undefined, () => this.back = false );
             this.key_triggered_button( "Right",  [ "d" ], () =>  this.right = true, undefined, () => this.right = false );  this.new_line();
+            this.key_triggered_button( "Jump",[ " " ], () =>  this.initiateJump());  
          }
 
         //Lock pointer handler
         lockPointer(){
             this.canvas.requestPointerLock();
+        }
+
+        initiateJump()
+        {
+            const t = this.context.globals.graphics_state.animation_time / 1000, dt = this.context.globals.graphics_state.animation_delta_time / 1000;
+            if (t > this.lastJumpTime + this.jumpCoolDown)
+            {
+                console.log("jump");
+                this.lastJumpTime = t;
+            }
+
         }
 
         handlePointerLockChange(){
@@ -82,7 +98,7 @@ class Camera_Movement extends Scene_Component
                     this.context.globals.pointerLocked = true;
 
                     //Show crosshair
-                    document.getElementById("crosshair").style.display = "block";
+                    //document.getElementById("crosshair").style.display = "block";
                 }
             //Otherwise, the lock was just deactivated
             else{
@@ -93,7 +109,7 @@ class Camera_Movement extends Scene_Component
                 this.context.globals.pointerLocked = false;
 
                 //Hide crosshair
-                document.getElementById("crosshair").style.display = "none";
+                //document.getElementById("crosshair").style.display = "none";
             }
         }
 
@@ -114,60 +130,75 @@ class Camera_Movement extends Scene_Component
             //this.updateCameraView();
         }
 
-        // Camera Collision checks
+        // Camera Collision checks for simple unrotated boxes
         handleCameraCollision()
         { 
+            const t = this.context.globals.graphics_state.animation_time / 1000, dt = this.context.globals.graphics_state.animation_delta_time / 1000;
             const cameraRadius = 4;
-            this.camVector[1] = -this.height;
+            var jumpForce = 0;
+            var yPos = -this.camVector[1];
+
+            // Calculate Jumping
+            var diff = t - (this.lastJumpTime + this.jumpForceTime);    
+            if (diff < 0)
+            {
+                // Smoothening the jump force over an impulse time so it isn't instant
+               jumpForce = this.jumpForce*(-diff);
+            }
+
+            // Some basic kinematics from Physics 1A to update jump height with graviy=ty
+            yPos = yPos + (jumpForce + GRAVITY)*(dt^2) * 0.5;
+
+            // Update camera yPos tentatively to be used for collision calculations
+            this.camVector[1] = -yPos;
 
             this.context.globals.workspace.map( (part) => {
+                // Get Camera positions
                 var xPos = -this.camVector[0];
                 var yPos = -this.camVector[1];
                 var zPos = -this.camVector[2];
 
+                // Get part parameters
                 var partPosition = part.position;
                 var partSize = part.size;
 
+                // Calculate box boundaries in world space
                 var xUpperBound = partPosition[0] + partSize[0] + cameraRadius;
                 var xLowerBound = partPosition[0] - partSize[0] - cameraRadius;
 
-                var yUpperBound = partPosition[1] + partSize[1];
-                var yLowerBound = partPosition[1] - partSize[1];
+                // Extra height volume due to camera, as if it is a capsule collider
+                var yUpperBound = partPosition[1] + partSize[1] + cameraRadius + this.height;           
+                var yLowerBound = partPosition[1] - partSize[1] - cameraRadius;
 
                 var zUpperBound = partPosition[2] + partSize[2] + cameraRadius;
                 var zLowerBound = partPosition[2] - partSize[2] - cameraRadius;
                 
-                if (part.name == "target"){
-                        console.log(part.name);
-                        console.log(part.position);
-                        console.log(this.camVector);
-                }
-                
-                if (xPos < xUpperBound && xPos > xLowerBound && zPos < zUpperBound && zPos > zLowerBound && yUpperBound > 0)
+                // Check if Camera position is completely contained inside our box boundaries
+                if (xPos < xUpperBound && xPos > xLowerBound && zPos < zUpperBound && zPos > zLowerBound && yPos < yUpperBound && yPos > yLowerBound)
                 {
-                    // Camera is inside the box, push in the direction closest to the edge
+                    // Camera is inside the box, we want to push in the direction closest to the edge
                     var xUpperDiff = Math.abs(xPos - xUpperBound);
                     var xLowerDiff = Math.abs(xPos - xLowerBound);
 
-                    //var yUpperDiff = Math.abs(yPos - yUpperBound);
-                    //var yLowerDiff = Math.abs(yPos - yLowerBound);
+                    var yUpperDiff = Math.abs(yPos - yUpperBound);
+                    var yLowerDiff = Math.abs(yPos - yLowerBound);
 
                     var zUpperDiff = Math.abs(zPos - zUpperBound);
                     var zLowerDiff = Math.abs(zPos - zLowerBound);
 
-                    if (xUpperDiff < xLowerDiff && xUpperDiff < zUpperDiff && xUpperDiff < zLowerDiff)
+                    // Find the direction that takes the least change to push along box boundaries
+                    if (xUpperDiff < xLowerDiff && xUpperDiff < zUpperDiff && xUpperDiff < zLowerDiff && xUpperDiff < yUpperDiff && xUpperDiff < yLowerDiff)
                         this.camVector[0] = -xUpperBound;
-                    else if (xLowerDiff < xUpperDiff && xLowerDiff < zUpperDiff && xLowerDiff < zLowerDiff)
+                    else if (xLowerDiff < xUpperDiff && xLowerDiff < zUpperDiff && xLowerDiff < zLowerDiff && xLowerDiff < yUpperDiff && xLowerDiff < yLowerDiff)
                         this.camVector[0] = -xLowerBound;
-                    else if (zUpperDiff < zLowerDiff && zUpperDiff < xUpperDiff && zUpperDiff < xLowerDiff)
+                    else if (zUpperDiff < zLowerDiff && zUpperDiff < xUpperDiff && zUpperDiff < xLowerDiff && zUpperDiff < yUpperDiff && zUpperDiff < yLowerDiff)
                         this.camVector[2] = -zUpperBound;
-                    else if (zLowerDiff < zUpperDiff && zLowerDiff < xUpperDiff && zLowerDiff < xLowerDiff)
+                    else if (zLowerDiff < zUpperDiff && zLowerDiff < xUpperDiff && zLowerDiff < xLowerDiff && zLowerDiff < yUpperDiff && zLowerDiff < yLowerDiff)
                         this.camVector[2] = -zLowerBound;
+                    else if (yUpperDiff < zUpperDiff && yUpperDiff < zLowerDiff && yUpperDiff < xUpperDiff && yUpperDiff < xLowerDiff)
+                        this.camVector[1] = -yUpperBound;
                 }
             })
-
-
-            /**/
         }
 
         //Function to apply movement camera transforms to graphics_state.camera_transform
@@ -230,22 +261,29 @@ class Camera_Movement extends Scene_Component
             if (updatedCurrentZoom > 0 && updatedCurrentZoom < SCOPE_MAGNITUDE){
                 this.currentZoom = updatedCurrentZoom;
                 //this.camVector = this.camVector.plus(viewVector.times(dt * ZOOM_SPEED * zoomDirection));
-
-                this.context.globals.graphics_state.projection_transform = Mat4.perspective(Math.PI / (4 + this.currentZoom*0.1), r, .1, 1000);
             }
             else{
                 if(updatedCurrentZoom< 0){
                     this.currentZoom = 0;
-                        this.context.globals.graphics_state.projection_transform = Mat4.perspective(Math.PI / (4 + this.currentZoom*0.1), r, .1, 1000);
                 }
                 else if (updatedCurrentZoom> SCOPE_MAGNITUDE){
                     this.currentZoom = SCOPE_MAGNITUDE;
                 }
             }
 
+            if (this.context.globals.zoomed == true)
+            {
+                document.getElementById("crosshair").style.display = "none";
+            }
+            else
+            {
+                document.getElementById("crosshair").style.display = "block";
+            }
+
             //interpolate gunOffset to simulate raising gun to eye based on currentzoom 
             const zoomRatio = 1 - (this.currentZoom/SCOPE_MAGNITUDE);
             this.context.globals.gunOffset = Mat4.translation([0 + 0.65 * zoomRatio, -0.55 - 0.1 * zoomRatio, -2 - 1* zoomRatio]).times(Mat4.scale([1.25,1.25,1.25,]));
+            this.context.globals.graphics_state.projection_transform = Mat4.perspective(Math.PI / (4 + this.currentZoom*0.1), r, .1, 1000);
 
         }
 

@@ -563,7 +563,7 @@ class Phong_Shader extends Shader          // THE DEFAULT SHADER: This uses the 
           //compute color darkening from shadow
           vec3 fragmentDepth = shadowPos.xyz;
           float shadowAcneRemover = 0.001;
-          fragmentDepth.z -= shadowAcneRemover;
+          //fragmentDepth.z -= shadowAcneRemover;
 
           float texelSize = 1.0 / 1024.0;
           float amountInLight = 0.0;
@@ -579,6 +579,11 @@ class Phong_Shader extends Shader          // THE DEFAULT SHADER: This uses the 
           }
           amountInLight /= 49.0;
           
+          //scale down darkening effect of shadows
+          amountInLight += 0.35;
+          if (amountInLight > 1.0){
+            amountInLight = 1.0;
+          }
           gl_FragColor = vec4(amountInLight * gl_FragColor.xyz, 1.0);
     
         }`;

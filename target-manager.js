@@ -66,7 +66,7 @@ window.Target_Manager = window.classes.Target_Manager =
         }
 
         make_control_panel() {
-            this.key_triggered_button( "Begin round",[ " " ], () =>  this.startRound());  
+            this.key_triggered_button( "Begin round",[ "t" ], () =>  this.startRound());  
             this.new_line();
             this.new_line();
             

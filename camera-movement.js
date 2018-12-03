@@ -1,7 +1,7 @@
 //constant that define the zoom magnitude and speed for scoping
 const SCOPE_MAGNITUDE = 30;
 const ZOOM_SPEED = 100;
-
+const GRAVITY = -2;
 
 
 window.Camera_Movement = window.classes.Camera_Movement = 
@@ -49,6 +49,12 @@ class Camera_Movement extends Scene_Component
             // Initialize zoom state variable 
             this.currentZoom = 0;
 
+            // Initialize jump states
+            this.lastJumpTime = 0;
+            this.jumpCoolDown = 0.5;
+            this.jumpForceTime = 0.5;
+            this.jumpForce = 7;
+
             // Initialize gun offset
             this.context.globals.gunOffset = Mat4.translation([0.65, -0.65, -3]).times(Mat4.scale([1.25,1.25,1.25,]));
             
@@ -62,11 +68,23 @@ class Camera_Movement extends Scene_Component
             this.key_triggered_button( "Left",   [ "a" ], () =>  this.left =  true, undefined, () => this.left = false );
             this.key_triggered_button( "Back",   [ "s" ], () =>  this.back = true, undefined, () => this.back = false );
             this.key_triggered_button( "Right",  [ "d" ], () =>  this.right = true, undefined, () => this.right = false );  this.new_line();
+            this.key_triggered_button( "Jump",[ " " ], () =>  this.initiateJump());  
          }
 
         //Lock pointer handler
         lockPointer(){
             this.canvas.requestPointerLock();
+        }
+
+        initiateJump()
+        {
+            const t = this.context.globals.graphics_state.animation_time / 1000, dt = this.context.globals.graphics_state.animation_delta_time / 1000;
+            if (t > this.lastJumpTime + this.jumpCoolDown)
+            {
+                console.log("jump");
+                this.lastJumpTime = t;
+            }
+
         }
 
         handlePointerLockChange(){
@@ -117,8 +135,27 @@ class Camera_Movement extends Scene_Component
         // Camera Collision checks
         handleCameraCollision()
         { 
+            const t = this.context.globals.graphics_state.animation_time / 1000, dt = this.context.globals.graphics_state.animation_delta_time / 1000;
             const cameraRadius = 4;
-            this.camVector[1] = -this.height;
+            var jumpForce = 0;
+            var yPos = -this.camVector[1];
+
+            // hard code jumping test
+            var diff = t - (this.lastJumpTime + this.jumpForceTime);
+            if (diff < 0)
+            {
+               console.log(diff);
+               jumpForce = this.jumpForce*(-diff);
+            }
+
+            yPos = yPos + (jumpForce + GRAVITY)*(dt^2) * 0.5;
+
+            if (yPos < this.height)
+                yPos = this.height;
+
+            this.camVector[1] = -yPos;
+
+            //
 
             this.context.globals.workspace.map( (part) => {
                 var xPos = -this.camVector[0];

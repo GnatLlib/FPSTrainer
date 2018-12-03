@@ -9,7 +9,7 @@
 ## Contribution
 Bill Tang: Implementation of gun animation/firing, volumetric lighting, shadow-mapping, and skybox.
   </br>Harrison Yuan: Camera/player movement and jumping, map development, terrain generation, player-to-terrain collision, target collision, round scoring system
-  </br>Evan Kim: Contributed on camera(player) movement, target management, map development, and html overlay.
+  </br>Evan Kim: Contributed on camera(player) movement, target generation/management/collision, map development, and html overlay.
 
 ## Instructions
 To run the game, simply run the server by opening host.command or host.bat file. The game will run on localhost:8000.

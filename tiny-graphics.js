@@ -248,15 +248,30 @@ class Vertex_Buffer           // To use Vertex_Buffer, make a subclass of it tha
       }
       this.gl = gl;
     }
-  execute_shaders( gl, type )     // Draws this shape's entire vertex buffer.
-    { if( this.indexed )
+  execute_shaders( gl, type )     // Draws this shape's entire vertex buffe
+    { 
+      
+    //Set Active Texture to 2 when drawing 
+      gl.activeTexture(gl.TEXTURE2);
+      if( this.indexed )
       { gl.bindBuffer( gl.ELEMENT_ARRAY_BUFFER, this.index_buffer );                          
         gl.drawElements( this.gl[type], this.indices.length, gl.UNSIGNED_INT, 0 ) 
       }                                                               // If no indices were provided, assume the vertices are arranged
       else  gl.drawArrays( this.gl[type], 0, this.positions.length );          // as triples of positions in a field called "positions".
+
+      gl.activeTexture(gl.TEXTURE0);
     }
   draw( graphics_state, model_transform, material, type = "TRIANGLES", gl = this.gl )        // To appear onscreen, a shape of any variety
-    { if( !this.gl ) throw "This shape's arrays are not copied over to graphics card yet.";  // goes through this draw() function, which
+    { 
+      //If we are in the shadow pass, we will use the DrawShadowMap program
+      if(graphics_state.shadowPass){
+        DrawShadowMap(graphics_state, model_transform, gl, this);
+        return;
+      }
+      
+      
+      
+      if( !this.gl ) throw "This shape's arrays are not copied over to graphics card yet.";  // goes through this draw() function, which
       material.shader.activate();                                                            // executes the shader programs.  The shaders
       material.shader.update_GPU( graphics_state, model_transform, material );               // draw the right shape due to pre-selecting
                                                                                              // the correct buffer region in the GPU that
@@ -470,6 +485,27 @@ class Webgl_Manager      // This class manages a whole graphics program for one 
            w.requestAnimationFrame    || w.webkitRequestAnimationFrame    // needed for queue-ing up re-display events:
         || w.mozRequestAnimationFrame || w.oRequestAnimationFrame || w.msRequestAnimationFrame
         || function( callback, element ) { w.setTimeout(callback, 1000/60);  } )( window );
+
+      //Create shadowmaping program
+      /* Unfortunately we are saving the shadowmap program bundle in graphics_state. It is very hacky
+        but is the easiest way to pass the bundle into VertexBuffer.draw() without major refactor */
+      this.globals.graphics_state.shadowmapBundle = CreateShadowProgram(gl);
+      this.globals.graphics_state.shadowPass = false;
+      this.globals.graphics_state.shadowsOn = false;
+      //Create volumetric shading program
+      this.postProcessBundle = CreatePostProgram(gl);
+
+      //create skybox cube_map
+      const textureFiles = [ 
+        '/assets/skybox/bloody-heresy_rt.png',
+        '/assets/skybox/bloody-heresy_lf.png',
+        '/assets/skybox/bloody-heresy_up.png',
+        '/assets/skybox/bloody-heresy_dn.png',
+        '/assets/skybox/bloody-heresy_bk.png',
+        '/assets/skybox/bloody-heresy_ft.png'
+      ]
+      this.skyboxTexture = LoadSkyBoxTextures(gl, textureFiles );
+      this.skyboxBundle = CreateSkyboxProgram(gl);
     }
   set_size( dimensions = [ 1080, 600 ] )                // This function allows you to re-size the canvas anytime.  
     { const [ width, height ] = dimensions;             // To work, it must change the size in CSS, wait for style to re-flow, 
@@ -487,17 +523,80 @@ class Webgl_Manager      // This class manages a whole graphics program for one 
       return   this.instances[ shader_or_texture ] = new ( shader_or_texture )( this.gl );  // Compile it and put it on the GPU.
     }
   register_scene_component( component )     // Allow a Scene_Component to show their control panel and enter the event loop.
-    { this.scene_components.unshift( component );  component.make_control_panel( component.controls );
+    {
+      this.scene_components.unshift( component );  
+      component.make_control_panel( component.controls );
     }
   render( time=0 )                                                // Animate shapes based upon how much measured real time has transpired.
     {                            this.globals.graphics_state.animation_delta_time = time - this.prev_time;
       if( this.globals.animate ) this.globals.graphics_state.animation_time      += this.globals.graphics_state.animation_delta_time;
       this.prev_time = time;
 
-      this.gl.clear( this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);        // Clear the canvas's pixels and z-buffer.
-     
+      //this.gl.clear( this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);        // Clear the canvas's pixels and z-buffer.
+
       for( let live_string of document.querySelectorAll(".live_string") ) live_string.onload( live_string );
+  
+      //Render scene shadowmap
+      let shadowTexture = this.gl.createTexture();
+      this.gl.activeTexture(this.gl.TEXTURE4);
+      this.gl.bindTexture(this.gl.TEXTURE_2D, shadowTexture);
+      this.gl.texImage2D(this.gl.TEXTURE_2D, 0 ,this.gl.RGBA, 1024,1024, 0, this.gl.RGBA, this.gl.UNSIGNED_BYTE, null );
+
+      this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MAG_FILTER, this.gl.NEAREST)
+      this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.NEAREST)
+      let shadowFramebuffer = this.gl.createFramebuffer();
+      this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, shadowFramebuffer);
+      this.gl.framebufferTexture2D( this.gl.FRAMEBUFFER, this.gl.COLOR_ATTACHMENT0, 
+        this.gl.TEXTURE_2D, shadowTexture, 0 );
+      
+      this.gl.viewport(0,0,1024,1024);
+      this.gl.clearColor(0, 0, 0, 1)
+      this.gl.clearDepth(1.0)
+      this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT)
+      this.globals.graphics_state.shadowPass = true;
+      if (this.globals.graphics_state.shadowsOn == true)
+        for ( let s of this.scene_components ) s.display( this.globals.graphics_state );  
+      this.globals.graphics_state.shadowPass = false;
+
+      this.gl.bindFramebuffer( this.gl.FRAMEBUFFER, null);
+      this.gl.activeTexture(this.gl.TEXTURE0);
+      this.gl.viewport(0,0,1080, 600);
+
+      //Render scene to texture first to use for Volumetric lighting
+      let occlusionTexture = this.gl.createTexture();
+      this.gl.activeTexture(this.gl.TEXTURE2);
+      this.gl.bindTexture(this.gl.TEXTURE_2D, occlusionTexture);
+      this.gl.texImage2D(this.gl.TEXTURE_2D, 0 ,this.gl.RGBA, 1080*0.5, 600*0.5, 0, this.gl.RGBA, this.gl.UNSIGNED_BYTE, null );
+
+      // set the filtering so we don't need mips
+      this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.LINEAR);
+      this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_S, this.gl.CLAMP_TO_EDGE);
+      this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_T, this.gl.CLAMP_TO_EDGE);
+
+      let framebuffer = this.gl.createFramebuffer();
+      this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, framebuffer);
+      this.gl.framebufferTexture2D( this.gl.FRAMEBUFFER, this.gl.COLOR_ATTACHMENT0, 
+        this.gl.TEXTURE_2D, occlusionTexture, 0 );
+
+      this.gl.viewport(0,0,1080*0.5, 600*0.5);
+      this.globals.graphics_state.occlusionPass = true;
+      this.globals.graphics_state.sunRender(); 
+      for ( let s of this.scene_components ) s.display( this.globals.graphics_state );  
+               // Draw each registered animation.
+      this.globals.graphics_state.occlusionPass = false;
+      //Render scene normally
+      this.gl.bindFramebuffer( this.gl.FRAMEBUFFER, null);
+      this.gl.activeTexture(this.gl.TEXTURE0);
+      this.gl.viewport(0,0,1080, 600);
+
+      //Render skybox
+        
+      RenderSkyBox(this.gl, this.skyboxBundle, this.globals.graphics_state, this.skyboxTexture);
       for ( let s of this.scene_components ) s.display( this.globals.graphics_state );            // Draw each registered animation.
+      this.globals.graphics_state.groundRender();
+      //Render Volumetric Lighting in post processing
+      RenderPostProcessing(this.gl, this.postProcessBundle, this.globals.graphics_state);
+
       this.event = window.requestAnimFrame( this.render.bind( this ) );   // Now that this frame is drawn, request that render() happen 
     }                                                                     // again as soon as all other web page events are processed.
 }
@@ -506,7 +605,7 @@ window.Scene_Component = window.tiny_graphics.Scene_Component =
 class Scene_Component       // The Scene_Component superclass is the base class for any scene part or code snippet that you can add to a
 {                           // canvas.  Make your own subclass(es) of this and override their methods "display()" and "make_control_panel()"
                             // to make them do something.  Finally, push them onto your Webgl_Manager's "scene_components" array.
-  constructor( webgl_manager, control_box )
+  constructor( webgl_manager, control_box, show_controls )
     { const callback_behavior = ( callback, event ) => 
            { callback( event );
              event.preventDefault();    // Fire the callback and cancel any default browser shortcut that is an exact match.

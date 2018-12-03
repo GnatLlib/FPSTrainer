@@ -1,5 +1,164 @@
 <!-- Graphics Example Code.  index.html - The web page document containing the canvas (drawing surface), that launches your javascript files. //-->
 <!DOCTYPE html> <html> <head> <meta charset="UTF-8"/> <link rel="icon" href="assets/fav.ico">
+
+<!-- Custom Shaders for Shadow Map Rendering -->
+<script id = "shadowmap_vert" type = "x-shader/x-vertex">
+    attribute vec3 aPosition;
+
+    uniform mat4 projection;
+    uniform mat4 modelview;
+
+
+    void main() {
+        gl_Position = projection * modelview * vec4(aPosition, 1.0);
+    
+    }
+</script>
+
+<script id = "shadowmap_frag" type = "x-shader/x-vertex">
+    precision mediump float;
+
+    vec4 encodeFloat (float depth) {
+        const vec4 bitShift = vec4(
+          256 * 256 * 256,
+          256 * 256,
+          256,
+          1.0
+        );
+        const vec4 bitMask = vec4(
+          0,
+          1.0 / 256.0,
+          1.0 / 256.0,
+          1.0 / 256.0
+        );
+        vec4 comp = fract(depth * bitShift);
+        comp -= comp.xxyz * bitMask;
+        return comp;
+      }
+
+    void main(){
+        gl_FragColor = encodeFloat(gl_FragCoord.z);
+    }
+</script>
+
+<!--  Custom Shaders for Skybox Rendering-->
+<script id = "skybox_vert", type = "x-shader/x-vertex">
+    precision mediump float;
+    attribute vec3 aPosition;
+
+    uniform mat4 projection;
+    uniform mat4 view;
+
+    varying vec3 texCoords;
+
+    void main(){
+        texCoords = aPosition;
+        gl_Position = projection * view * vec4(aPosition, 1.0);
+        //gl_Position = vec4(aPosition, 1.0);
+    }
+</script>
+
+<script id = "skybox_frag" type="x-shader/x-fragment">
+    precision mediump float;
+    varying vec3 texCoords;
+
+    uniform samplerCube skyboxTex;
+
+    void main(){
+        gl_FragColor = textureCube(skyboxTex, texCoords);
+        //gl_FragColor = vec4(1.0,1.0,0.0,1.0);
+    }
+</script>
+<!-- Custom Shaders for Volumetric Lighting -->
+<script id = "volumetric_vert", type="x-shader/x-vertex">
+  precision mediump float;
+
+  attribute vec3 coordinates;
+  varying vec2 vUv;
+
+  void main() {
+      vUv = 0.5 * (coordinates.xy+1.0);
+      //vUv = coordinates.xy;
+      
+      gl_Position = vec4(coordinates.xy, 0.0, 1.0);
+  }
+</script>
+
+<script id = "volumetric_frag", type="x-shader/x-fragment">
+  precision highp float;
+    uniform sampler2D occlusionTexture;
+    varying vec2 vUv;
+    
+    uniform vec2 lightPosition;
+    
+    uniform float density;
+    uniform float weight;
+    uniform float decay;
+    uniform float exposure;
+    uniform int numSamples;
+    uniform int outOfBounds;
+
+    vec3 godrays(
+    float density,
+    float weight,
+    float decay,
+    float exposure,
+    int numSamples,
+    sampler2D occlusionTexture,
+    vec2 lightPosition,
+    vec2 uv
+    ) {
+
+        
+
+    vec3 fragColor = vec3(0.0,0.0,0.0);
+
+    //if light position is off the screen, don't render any rays
+    if (outOfBounds == 1){
+        return fragColor;
+    }
+    vec2 deltaTextCoord = vec2( uv - lightPosition.xy );
+
+    vec2 textCoo = uv.xy ;
+    deltaTextCoord *= (1.0 /  float(numSamples)) * density;
+    float illuminationDecay = 1.0;
+
+
+    for(int i=0; i < 100 ; i++){
+        if(numSamples < i) {
+            break;
+        }
+
+        textCoo -= deltaTextCoord;
+        vec3 samp = texture2D(occlusionTexture, textCoo   ).xyz;
+        //vec3 samp = vec3(1.0,1.0,1.0);
+        samp *= illuminationDecay * weight;
+        fragColor += samp;
+        illuminationDecay *= decay;
+    }
+
+    fragColor *= exposure;
+    return fragColor;
+}
+    
+    
+    void main() {
+    
+    vec3 fragColor = godrays(
+        density,
+        weight,
+        decay,
+        exposure,
+        numSamples,
+        occlusionTexture,
+        lightPosition,
+        vUv
+        );
+    
+        gl_FragColor = vec4(fragColor , 1.0);
+    }
+</script>
+
 <script> window.tiny_graphics = {};             // Store all our JavaScipt code inside of classes here.
          window.classes = {}                    
          </script>          
@@ -9,13 +168,23 @@
 <script src=   "main-scene.js" ></script>
 <script src = "camera-movement.js"></script>
 <script src = "map-environment.js"></script>
-<script src = "aiming-manager.js"></script></head>
+<script src = "aiming-manager.js"></script>
+<script src = "target-manager.js"></script>
+<script src = "volumetric-lighting.js"></script>
+<script src = "skybox.js"></script> 
+<script src = "shadow-mapping.js"></script></head>
 <body style="background: DarkGray">       <!-- Begin typing your web page here. //-->
 
                               <!-- The following code embeds a WebGL canvas panel widget with certain scenes and their controls. //-->
 <div id="main-canvas" class="canvas-widget" style = "margin:auto; position:relative;">
   <img id="crosshair" src="assets/crosshair.png" height = "32" width="32" style="position:absolute; top:284px;left:524px;display:none">
+  <div id="overlay" style="position:absolute; left:10px; right:10px; display: block">
+    <div style="background-color:rgba(0, 0, 0, 0.7); color:white; padding: 3px 3px 0px 3px">Round Score: <span id="score"></span></div>
+    <div style="background-color:rgba(0, 0, 0, 0.7); color:white; padding: 0px 3px 0px 3px">Targets Left: <span id="targets"></span></div>
+    <div style="background-color:rgba(0, 0, 0, 0.7); color:white; padding: 0px 3px 3px 3px">Shot Accuracy: <span id="accuracy"></span></div>    
+  </div>
 </div>
+
 <script> "use strict"     // ********************* THE ENTRY POINT OF YOUR WHOLE PROGRAM STARTS HERE ********************* 
                                            // Use this code to embed a widget into any web page.  The widget inclues a 3D WebGL area
                                            // (an HTML canvas) and various panels of controls.
@@ -30,5 +199,4 @@
 <script> "use strict"
   new Code_Widget( "main-code", "Term_Project_Scene" );
 </script>
-
 </body></html>
